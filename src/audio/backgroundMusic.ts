@@ -25,9 +25,12 @@ function pickNextTrackIndex(lastIdx: number): number {
  */
 export function useBackgroundMusic() {
   const [musicEnabled, setMusicEnabled] = useState<boolean>(() => !IS_DEV);
+  const [prefsLoaded, setPrefsLoaded] = useState<boolean>(false);
   const playerRef = useRef<AudioPlayer | null>(null);
   const lastTrackIdxRef = useRef<number>(-1);
   const musicEnabledRef = useRef<boolean>(!IS_DEV);
+  const prefsLoadedRef = useRef<boolean>(false);
+  const userToggledRef = useRef<boolean>(false);
 
   useEffect(() => {
     musicEnabledRef.current = musicEnabled;
@@ -47,17 +50,25 @@ export function useBackgroundMusic() {
     }
   }, []);
 
-  // Load persisted mute preference once on mount.
+  // Load persisted mute preference before starting playback to avoid a muted cold-start blip.
   useEffect(() => {
     let mounted = true;
     void getJSON<boolean>(
       STORAGE_KEYS.MUSIC_ENABLED,
       (v): v is boolean => typeof v === 'boolean',
-    ).then((saved) => {
-      if (!mounted || saved === null) return;
-      musicEnabledRef.current = saved;
-      setMusicEnabled(saved);
-    });
+    )
+      .then((saved) => {
+        if (!mounted) return;
+        if (!userToggledRef.current && saved !== null) {
+          musicEnabledRef.current = saved;
+          setMusicEnabled(saved);
+        }
+      })
+      .finally(() => {
+        if (!mounted) return;
+        prefsLoadedRef.current = true;
+        setPrefsLoaded(true);
+      });
     return () => {
       mounted = false;
     };
@@ -81,7 +92,7 @@ export function useBackgroundMusic() {
       player.volume = BACKGROUND_MUSIC_VOLUME;
       playerRef.current = player;
 
-      if (musicEnabledRef.current) {
+      if (prefsLoadedRef.current && musicEnabledRef.current) {
         player.play();
       }
     } catch {
@@ -90,7 +101,7 @@ export function useBackgroundMusic() {
 
     const activePlayer = player;
     const statusSub = activePlayer.addListener('playbackStatusUpdate', (status) => {
-      if (status.didJustFinish && musicEnabledRef.current) {
+      if (prefsLoadedRef.current && status.didJustFinish && musicEnabledRef.current) {
         startNextTrack(activePlayer);
       }
     });
@@ -98,7 +109,7 @@ export function useBackgroundMusic() {
     const appSub = AppState.addEventListener('change', (nextState) => {
       try {
         if (nextState === 'active') {
-          if (musicEnabledRef.current && !activePlayer.playing) {
+          if (prefsLoadedRef.current && musicEnabledRef.current && !activePlayer.playing) {
             activePlayer.play();
           }
         } else if (activePlayer.playing) {
@@ -122,8 +133,9 @@ export function useBackgroundMusic() {
     };
   }, [startNextTrack]);
 
-  // Apply mute/unmute transitions cleanly.
+  // Apply mute/unmute transitions cleanly once persisted preference has hydrated.
   useEffect(() => {
+    if (!prefsLoaded) return;
     const player = playerRef.current;
     if (!player) return;
     try {
@@ -136,9 +148,10 @@ export function useBackgroundMusic() {
     } catch {
       // Ignore native errors
     }
-  }, [musicEnabled]);
+  }, [musicEnabled, prefsLoaded]);
 
   const toggleMusic = useCallback(() => {
+    userToggledRef.current = true;
     setMusicEnabled((prev) => {
       const next = !prev;
       musicEnabledRef.current = next;

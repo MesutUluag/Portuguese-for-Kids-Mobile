@@ -40,7 +40,10 @@ export function WordImage({
   const content =
     showPhoto && imgUrl ? (
       <Image
-        source={{ uri: imgUrl, headers: { 'User-Agent': WIKI_USER_AGENT } }}
+        source={{
+          uri: imgUrl,
+          headers: { 'User-Agent': WIKI_USER_AGENT ?? 'PortugueseForKidsMobile/1.0' },
+        }}
         accessibilityLabel={accessibilityLabel ?? en}
         cachePolicy="memory-disk"
         contentFit="cover"

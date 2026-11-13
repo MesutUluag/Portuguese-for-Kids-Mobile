@@ -7,7 +7,7 @@ Companion repositories:
 - **Spring Boot backend:** `../Portugese-for-Kids-Backend`
 - **GitHub:** [MesutUluag/Portuguese-for-Kids-Mobile](https://github.com/MesutUluag/Portuguese-for-Kids-Mobile)
 
-> **Current Status — Phase 0 (Foundation & Technical Spikes):** Core TypeScript data sync, mobile assets, CI checks, and Android-verified technical spikes (**Spike A: Firebase Auth AsyncStorage persistence** and **Spike B: Skia + Reanimated 60fps 3×3 jigsaw**) are implemented. Full learning mode screens (Cards, Games 1–8, Story, Auth/Leaderboard UI) follow in Phases 1–6.
+> **Current Status — Phase 3 (Games 1–5, Crossword & Audio):** Phase 0 spikes, Phase 1 auth/stats/leaderboard, Phase 3 interactive games (**Game 1 Picture Quiz**, **Game 2 Listen & Find**, **Game 3 Memory Match**, **Game 4 Fill Missing Letter**, **Game 5 Unscramble Word**, **Game 8 Crossword**), European Portuguese TTS (`pt-PT`), background music, and Wikimedia thumbnail caching (`WordImage`) are live. Flashcards, AI Story Mode, Jigsaw (`Game 6`), and Market (`Game 7`) follow in upcoming phases.
 
 ---
 
@@ -136,7 +136,9 @@ Portugese-for-Kids-Mobile/
 └── src/
     ├── App.tsx                   # Mode switcher & auth-gated learning shell
     ├── api/client.ts             # Centralised HTTP client (timeout, 401 refresh, schema guard)
-    ├── audio/speech.ts           # expo-speech European Portuguese TTS + silent-mode audio session
+    ├── audio/
+    │   ├── backgroundMusic.ts    # Shuffled background music tracks + AppState & mute sync
+    │   └── speech.ts             # expo-speech European Portuguese TTS + silent-mode audio session
     ├── auth/                     # Firebase Auth, parental gate, nickname picker, stats & leaderboard
     ├── commons/                  # Shared UI components (GameScoreBadge, LoadingSpinner, WordImage)
     ├── components/               # Learning game screens (Game1..Game5, Game8 Crossword)
@@ -157,3 +159,21 @@ Portugese-for-Kids-Mobile/
         ├── jigsawPath.ts         # Skia path builder for jigsaw piece clipping
         └── __tests__/
 ```
+
+---
+
+## AsyncStorage Keys (`src/utils/storage.ts`)
+
+All persistent keys are registered centrally in `STORAGE_KEYS` and wiped by `clearAppStorage()` upon account deletion:
+
+| Constant | Key | Purpose |
+|---|---|---|
+| `OUTBOX` | `kids_unsynced_stats_v1` | Offline/unsynced study telemetry & idempotent `batchId` |
+| `MUSIC_ENABLED` | `kids_music_enabled` | Persisted background music mute/unmute toggle |
+| `LANGUAGE` | `kids_language_v1` | UI language preference (`'en'` \| `'tr'`) |
+| `STUDY_DATE` | `kids_study_time_date` | Local study date marker (`YYYY-MM-DD`) |
+| `STUDY_SECONDS` | `kids_study_time_seconds` | Legacy/local daily study seconds counter |
+| `PT_VOICE_HINT_SHOWN` | `kids_pt_voice_hint_shown_v1` | Tracks whether missing `pt-PT` voice hint was shown |
+| `WIKI_IMAGE_CACHE` | `kids_wiki_img_cache_v1` | Cached Wikimedia thumbnail URLs per English word |
+| `STORY_HISTORY_PREFIX` | `story_history_` | Per-context generated story sentence history |
+| `NICKNAME_CONFIRMED_PREFIX` | `kids_nickname_confirmed_v1_` | Per-UID nickname confirmation flag |

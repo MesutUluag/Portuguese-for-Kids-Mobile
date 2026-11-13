@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import * as Crypto from 'expo-crypto';
@@ -44,13 +44,40 @@ export function useStatsTracker(currentMode: Mode) {
       : 'active',
   );
   const modeRef = useRef<Mode>(currentMode);
+  const profileRef = useRef<UserProfile | null>(profile);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [unsyncedSeconds, setUnsyncedSeconds] = useState(0);
+  const todaySecondsListenersRef = useRef<Set<(seconds: number) => void>>(new Set());
   const [unsyncedScoreByMode, setUnsyncedScoreByMode] = useState<Partial<Record<Mode, number>>>({});
+
+  const getTodayTimeSeconds = useCallback((): number => {
+    const synced = profileRef.current?.stats?.dailyTimeSeconds?.[getLocalDateString()] ?? 0;
+    return synced + outboxRef.current.activeSecondsDelta;
+  }, []);
+
+  const notifyTodaySecondsListeners = useCallback(() => {
+    const nextSeconds = getTodayTimeSeconds();
+    todaySecondsListenersRef.current.forEach((listener) => listener(nextSeconds));
+  }, [getTodayTimeSeconds]);
+
+  const subscribeTodayTimeSeconds = useCallback(
+    (listener: (seconds: number) => void): (() => void) => {
+      todaySecondsListenersRef.current.add(listener);
+      listener(getTodayTimeSeconds());
+      return () => {
+        todaySecondsListenersRef.current.delete(listener);
+      };
+    },
+    [getTodayTimeSeconds],
+  );
 
   useEffect(() => {
     currentUidRef.current = currentUid;
   }, [currentUid]);
+
+  useEffect(() => {
+    profileRef.current = profile;
+    notifyTodaySecondsListeners();
+  }, [profile, notifyTodaySecondsListeners]);
 
   useEffect(() => {
     modeRef.current = currentMode;
@@ -84,9 +111,9 @@ export function useStatsTracker(currentMode: Mode) {
       saveTimerRef.current = null;
     }
     outboxRef.current = createEmptyOutbox('guest');
-    setUnsyncedSeconds(0);
     setUnsyncedScoreByMode({});
-  }, []);
+    notifyTodaySecondsListeners();
+  }, [notifyTodaySecondsListeners]);
 
   const flush = useCallback(async (): Promise<void> => {
     if (!user || !outboxReadyRef.current) return;
@@ -112,9 +139,12 @@ export function useStatsTracker(currentMode: Mode) {
       setProfile(updatedProfile);
       const remaining = deductSentDeltas(outboxRef.current, payload);
       outboxRef.current = remaining;
-      setUnsyncedSeconds(remaining.activeSecondsDelta);
       setUnsyncedScoreByMode({ ...remaining.scoreByModeDelta });
       persistOutboxNow(remaining);
+      const nextSeconds =
+        (updatedProfile.stats?.dailyTimeSeconds?.[getLocalDateString()] ?? 0) +
+        remaining.activeSecondsDelta;
+      todaySecondsListenersRef.current.forEach((listener) => listener(nextSeconds));
     } catch (err) {
       console.warn('[telemetry] Sync error (kept in outbox with batchId):', err);
     } finally {
@@ -131,8 +161,8 @@ export function useStatsTracker(currentMode: Mode) {
         const resolved = resolveOutboxForUid(loaded, currentUidRef.current);
         outboxRef.current = resolved;
         outboxReadyRef.current = true;
-        setUnsyncedSeconds(resolved.activeSecondsDelta);
         setUnsyncedScoreByMode({ ...resolved.scoreByModeDelta });
+        notifyTodaySecondsListeners();
         if (loaded && loaded.ownerUid !== resolved.ownerUid) {
           persistOutboxNow(resolved);
         }
@@ -145,7 +175,7 @@ export function useStatsTracker(currentMode: Mode) {
     return () => {
       mounted = false;
     };
-  }, [flush, persistOutboxNow]);
+  }, [flush, notifyTodaySecondsListeners, persistOutboxNow]);
 
   // Register signout, flush, and account-delete discard handlers.
   useEffect(() => {
@@ -183,7 +213,7 @@ export function useStatsTracker(currentMode: Mode) {
       const mode = modeRef.current;
       outbox.activeSecondsDelta += 1;
       outbox.timeByModeDelta[mode] = (outbox.timeByModeDelta[mode] ?? 0) + 1;
-      setUnsyncedSeconds(outbox.activeSecondsDelta);
+      notifyTodaySecondsListeners();
       scheduleSaveOutbox();
     }, 1000);
 
@@ -193,7 +223,7 @@ export function useStatsTracker(currentMode: Mode) {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [scheduleSaveOutbox]);
+  }, [notifyTodaySecondsListeners, scheduleSaveOutbox]);
 
   // Periodic persist + flush every 60 seconds.
   useEffect(() => {
@@ -286,8 +316,14 @@ export function useStatsTracker(currentMode: Mode) {
     [profile, unsyncedScoreByMode],
   );
 
-  const todayTimeSeconds =
-    (profile?.stats?.dailyTimeSeconds?.[getLocalDateString()] ?? 0) + unsyncedSeconds;
+  const unsyncedTotalScore = useMemo(
+    () =>
+      Object.values(unsyncedScoreByMode).reduce<number>(
+        (sum, val) => sum + (val ?? 0),
+        0,
+      ),
+    [unsyncedScoreByMode],
+  );
 
   const recordSpeechListen = useCallback(() => {
     const outbox = outboxRef.current;
@@ -301,7 +337,9 @@ export function useStatsTracker(currentMode: Mode) {
     recordGameScore,
     recordSpeechListen,
     getScoreForMode,
-    todayTimeSeconds,
+    unsyncedTotalScore,
+    getTodayTimeSeconds,
+    subscribeTodayTimeSeconds,
     flushNow: flush,
   };
 }

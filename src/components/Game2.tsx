@@ -7,7 +7,6 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { cancelSpeech, speakAndSchedule, speakText } from '@/audio/speech';
@@ -68,7 +67,6 @@ export function Game2({
   const [round, setRound] = useState<RoundState>(() => buildRound(1));
   const [correctPt, setCorrectPt] = useState<string | null>(null);
   const [lastWrongPt, setLastWrongPt] = useState<string | null>(null);
-  const [popKey, setPopKey] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
   const attemptsRef = useRef(0);
@@ -82,26 +80,14 @@ export function Game2({
   }, [language]);
 
   const shakeX = useSharedValue(0);
-  const cardScale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }, { scale: cardScale.value }],
+    transform: [{ translateX: shakeX.value }],
   }));
 
   useEffect(() => {
     speakText(round.target.pt, { language: langRef.current });
   }, [round.roundId, round.target.pt]);
-
-  useEffect(() => {
-    if (popKey <= 0 || reduceMotion) return undefined;
-    cardScale.set(
-      withSequence(
-        withSpring(1.04, { damping: 12, stiffness: 280 }),
-        withSpring(1, { damping: 14, stiffness: 260 }),
-      ),
-    );
-    return () => cancelAnimation(cardScale);
-  }, [popKey, reduceMotion, cardScale]);
 
   useEffect(() => {
     if (shakeKey <= 0 || reduceMotion) return undefined;
@@ -136,7 +122,6 @@ export function Game2({
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const points = scoreGame2(attemptsRef.current);
       onScore?.(points);
-      setPopKey((k) => k + 1);
 
       cancelAdvanceRef.current?.();
       cancelAdvanceRef.current = speakAndSchedule(round.target.pt, {

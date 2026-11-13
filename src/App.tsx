@@ -65,6 +65,33 @@ function formatStudyTime(seconds: number): string {
   return result;
 }
 
+interface StudyTimeBadgeProps {
+  isTr: boolean;
+  getTodayTimeSeconds: () => number;
+  subscribeTodayTimeSeconds: (listener: (seconds: number) => void) => () => void;
+}
+
+const StudyTimeBadge = React.memo(function StudyTimeBadge({
+  isTr,
+  getTodayTimeSeconds,
+  subscribeTodayTimeSeconds,
+}: StudyTimeBadgeProps) {
+  const [seconds, setSeconds] = useState<number>(() => getTodayTimeSeconds());
+
+  useEffect(() => {
+    return subscribeTodayTimeSeconds(setSeconds);
+  }, [subscribeTodayTimeSeconds]);
+
+  return (
+    <View style={styles.timeBadge}>
+      <Timer size={14} strokeWidth={2.2} color={colors.white} />
+      <Text style={styles.timeBadgeText} maxFontSizeMultiplier={1.2}>
+        {isTr ? 'Bugün' : 'Time Today'}: {formatStudyTime(seconds)}
+      </Text>
+    </View>
+  );
+});
+
 type NavModeItem = {
   mode: Mode;
   labelEn: string;
@@ -113,8 +140,15 @@ function AppShell() {
   const [gainKey, setGainKey] = useState<number>(0);
 
   const { musicEnabled, toggleMusic } = useBackgroundMusic();
-  const { notifyInteraction, recordGameScore, getScoreForMode, todayTimeSeconds, flushNow } =
-    useStatsTracker(currentMode);
+  const {
+    notifyInteraction,
+    recordGameScore,
+    getScoreForMode,
+    unsyncedTotalScore,
+    getTodayTimeSeconds,
+    subscribeTodayTimeSeconds,
+    flushNow,
+  } = useStatsTracker(currentMode);
 
   const handleGameScore = useCallback(
     (mode: Mode, points: number) => {
@@ -221,7 +255,7 @@ function AppShell() {
       ? activeNavMode.labelTr
       : activeNavMode.labelEn
     : currentMode.toUpperCase();
-  const totalScore = profile?.stats?.totalScore ?? 0;
+  const totalScore = (profile?.stats?.totalScore ?? 0) + unsyncedTotalScore;
   const streakCount = profile?.stats?.currentStreakDays ?? 0;
   const profileFirstName = profile?.displayName
     ? profile.displayName.split(' ')[0] ?? (isTr ? 'Profil' : 'Profile')
@@ -298,12 +332,11 @@ function AppShell() {
           </View>
 
           <View style={styles.topStatsBar}>
-            <View style={styles.timeBadge}>
-              <Timer size={14} strokeWidth={2.2} color={colors.white} />
-              <Text style={styles.timeBadgeText} maxFontSizeMultiplier={1.2}>
-                {isTr ? 'Bugün' : 'Time Today'}: {formatStudyTime(todayTimeSeconds)}
-              </Text>
-            </View>
+            <StudyTimeBadge
+              isTr={isTr}
+              getTodayTimeSeconds={getTodayTimeSeconds}
+              subscribeTodayTimeSeconds={subscribeTodayTimeSeconds}
+            />
 
             <Pressable
               accessibilityRole="button"

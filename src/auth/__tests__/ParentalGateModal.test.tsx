@@ -22,7 +22,7 @@ describe('ParentalGateModal', () => {
     jest.useRealTimers();
   });
 
-  it('regenerates the 2-digit challenge on a wrong answer and unlocks on the new answer', async () => {
+  it('regenerates the challenge on a wrong answer and unlocks on the new answer', async () => {
     const onSuccess = jest.fn();
     const onCancel = jest.fn();
 
@@ -36,10 +36,10 @@ describe('ParentalGateModal', () => {
     );
 
     const first = readDisplayedChallenge();
-    expect(first.left).toBeGreaterThanOrEqual(13);
-    expect(first.left).toBeLessThanOrEqual(24);
-    expect(first.right).toBeGreaterThanOrEqual(12);
-    expect(first.right).toBeLessThanOrEqual(19);
+    expect(first.left).toBeGreaterThanOrEqual(11);
+    expect(first.left).toBeLessThanOrEqual(16);
+    expect(first.right).toBeGreaterThanOrEqual(3);
+    expect(first.right).toBeLessThanOrEqual(5);
 
     const input = screen.getByLabelText('Parental gate answer');
     const verifyBtn = screen.getByLabelText('Verify and continue');

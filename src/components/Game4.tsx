@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -7,15 +7,14 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { cancelSpeech, speakText } from '@/audio/speech';
+import { cancelSpeech, speakAndSchedule, speakText } from '@/audio/speech';
 import { GameScoreBadge } from '@/commons/GameScoreBadge';
 import { WordImage } from '@/commons/WordImage';
 import { kidsWords } from '@/core/data/index';
 import type { Word } from '@/core/data/types';
-import { colors, radii, shadows, spacing, touchTargets } from '@/theme/tokens';
+import { colors, shadows } from '@/theme/tokens';
 import { scoreGame4 } from '@/utils/gameScoring';
 import type { GameProps } from './Game1';
 
@@ -85,11 +84,10 @@ export function Game4({
   const [round, setRound] = useState<RoundState>(() => buildRound(1));
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastWrongChar, setLastWrongChar] = useState<string | null>(null);
-  const [popKey, setPopKey] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
   const hasWrongAttemptRef = useRef(false);
-  const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelAdvanceRef = useRef<(() => void) | null>(null);
   const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const langRef = useRef(language);
 
@@ -98,26 +96,14 @@ export function Game4({
   }, [language]);
 
   const shakeX = useSharedValue(0);
-  const cardScale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }, { scale: cardScale.value }],
+    transform: [{ translateX: shakeX.value }],
   }));
 
   useEffect(() => {
     speakText(round.target.pt, { language: langRef.current });
   }, [round.roundId, round.target.pt]);
-
-  useEffect(() => {
-    if (popKey <= 0 || reduceMotion) return undefined;
-    cardScale.set(
-      withSequence(
-        withSpring(1.04, { damping: 12, stiffness: 280 }),
-        withSpring(1, { damping: 14, stiffness: 260 }),
-      ),
-    );
-    return () => cancelAnimation(cardScale);
-  }, [popKey, reduceMotion, cardScale]);
 
   useEffect(() => {
     if (shakeKey <= 0 || reduceMotion) return undefined;
@@ -135,20 +121,11 @@ export function Game4({
 
   useEffect(() => {
     return () => {
-      if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+      cancelAdvanceRef.current?.();
+      cancelAdvanceRef.current = null;
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       cancelSpeech();
     };
-  }, []);
-
-  const triggerNextRound = useCallback(() => {
-    if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
-    nextTimerRef.current = setTimeout(() => {
-      hasWrongAttemptRef.current = false;
-      setShowSuccess(false);
-      setLastWrongChar(null);
-      setRound((prev) => buildRound(prev.roundId + 1));
-    }, 2000);
   }, []);
 
   const handleAnswer = (c: string) => {
@@ -160,9 +137,19 @@ export function Game4({
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const points = scoreGame4(hasWrongAttemptRef.current);
       onScore?.(points);
-      speakText(round.target.pt, { language });
-      setPopKey((k) => k + 1);
-      triggerNextRound();
+
+      cancelAdvanceRef.current?.();
+      cancelAdvanceRef.current = speakAndSchedule(round.target.pt, {
+        language,
+        minDelayMs: 1600,
+        fallbackMs: 2800,
+        onAdvance: () => {
+          hasWrongAttemptRef.current = false;
+          setShowSuccess(false);
+          setLastWrongChar(null);
+          setRound((prev) => buildRound(prev.roundId + 1));
+        },
+      });
     } else {
       hasWrongAttemptRef.current = true;
       setLastWrongChar(c);
@@ -177,7 +164,6 @@ export function Game4({
     }
   };
 
-  const rows: [string[], string[]] = [round.options.slice(0, 2), round.options.slice(2, 4)];
   const chars = round.target.pt.split('');
   const blankText = chars
     .map((ch, idx) => (!showSuccess && idx === round.missingIndex ? '_' : ch))
@@ -185,10 +171,7 @@ export function Game4({
 
   return (
     <Animated.View style={[styles.card, animStyle]}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title} maxFontSizeMultiplier={1.3}>
-          ✍️ {isTr ? 'Eksik Harfi Bul' : 'Fill Missing Letter'}
-        </Text>
+      <View style={styles.badgeSlot}>
         <GameScoreBadge
           score={score}
           recentGain={recentGain}
@@ -196,6 +179,10 @@ export function Game4({
           language={language}
         />
       </View>
+
+      <Text style={styles.title} maxFontSizeMultiplier={1.25}>
+        ✍️ {isTr ? 'Eksik Harfi Bul' : 'Fill Missing Letter'}
+      </Text>
 
       <View style={styles.imageStage}>
         <WordImage
@@ -219,42 +206,33 @@ export function Game4({
         {isTr ? round.target.tr : round.target.en}
       </Text>
 
-      <View style={styles.optionsGrid}>
-        {rows.map((pair, rIdx) => (
-          <View key={rIdx} style={styles.optionRow}>
-            {pair.map((c) => {
-              const isCorrect = showSuccess && c === round.correctChar;
-              const isWrong = lastWrongChar === c;
-              return (
-                <Pressable
-                  key={c}
-                  disabled={showSuccess}
-                  onPress={() => handleAnswer(c)}
-                  accessibilityRole="button"
-                  accessibilityLabel={c}
-                  accessibilityState={{ disabled: showSuccess }}
-                  style={({ pressed }) => [
-                    styles.charBtn,
-                    isCorrect && styles.charCorrect,
-                    isWrong && styles.charWrong,
-                    showSuccess && !isCorrect && styles.charDisabled,
-                    pressed && !showSuccess && styles.pressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.charBtnText,
-                      (isCorrect || isWrong) && styles.charBtnLight,
-                    ]}
-                    maxFontSizeMultiplier={1.2}
-                  >
-                    {c}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
+      <View style={styles.letterOptions}>
+        {round.options.map((c) => {
+          const isCorrect = showSuccess && c === round.correctChar;
+          const isWrong = lastWrongChar === c;
+          return (
+            <Pressable
+              key={c}
+              disabled={showSuccess}
+              onPress={() => handleAnswer(c)}
+              accessibilityRole="button"
+              accessibilityLabel={c}
+              accessibilityState={{ disabled: showSuccess }}
+              hitSlop={4}
+              style={({ pressed }) => [
+                styles.charBtn,
+                isCorrect && styles.charCorrect,
+                isWrong && styles.charWrong,
+                showSuccess && !isCorrect && styles.charDisabled,
+                pressed && !showSuccess && styles.pressed,
+              ]}
+            >
+              <Text style={styles.charBtnText} maxFontSizeMultiplier={1.2}>
+                {c}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </Animated.View>
   );
@@ -263,81 +241,78 @@ export function Game4({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    borderWidth: 3,
+    borderRadius: 24,
+    borderWidth: 3.5,
     borderColor: colors.blue,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: 20,
+    gap: 10,
+    position: 'relative',
     ...shadows.md,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+  badgeSlot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 2,
   },
   title: {
-    flex: 1,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     color: colors.blue,
+    textAlign: 'center',
+    paddingHorizontal: 58,
+    minHeight: 34,
   },
   imageStage: {
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingTop: 2,
   },
   blankDisplay: {
-    fontSize: 30,
-    fontWeight: '900',
+    fontSize: 28,
+    fontWeight: '800',
     color: colors.navy,
     textAlign: 'center',
-    letterSpacing: 3,
+    letterSpacing: 3.5,
   },
   blankTranslation: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.textMuted,
     textAlign: 'center',
+    marginTop: -2,
   },
-  optionsGrid: {
-    gap: spacing.md,
-  },
-  optionRow: {
+  letterOptions: {
     flexDirection: 'row',
-    gap: spacing.md,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 6,
   },
   charBtn: {
-    flex: 1,
-    minHeight: touchTargets.min,
-    borderRadius: radii.lg,
-    borderWidth: 2,
-    borderColor: colors.blueLight,
-    backgroundColor: '#f8fafc',
+    width: 50,
+    height: 50,
+    borderRadius: 10,
+    backgroundColor: colors.blue,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.sm,
   },
   charCorrect: {
     backgroundColor: colors.green,
-    borderColor: '#059669',
   },
   charWrong: {
     backgroundColor: colors.red,
-    borderColor: '#dc2626',
   },
   charDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   charBtnText: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: colors.navy,
-  },
-  charBtnLight: {
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.white,
   },
   pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.96 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.94 }],
   },
 });

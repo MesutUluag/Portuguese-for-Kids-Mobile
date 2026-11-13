@@ -50,6 +50,7 @@ jest.mock('expo-image', () => {
 });
 
 jest.mock('@/utils/useWikiImage', () => ({
+  WIKI_USER_AGENT: 'PortugueseForKidsMobile/1.0',
   useWikiImage: () => null,
 }));
 

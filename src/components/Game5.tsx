@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   cancelAnimation,
@@ -7,10 +7,9 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { cancelSpeech, speakText } from '@/audio/speech';
+import { cancelSpeech, speakAndSchedule, speakText } from '@/audio/speech';
 import { GameScoreBadge } from '@/commons/GameScoreBadge';
 import { WordImage } from '@/commons/WordImage';
 import { kidsWords } from '@/core/data/index';
@@ -54,6 +53,7 @@ export function Game5({
 }: GameProps) {
   const isTr = language === 'tr';
   const reduceMotion = useReducedMotion();
+  const { width: windowWidth } = useWindowDimensions();
 
   const [history, setHistory] = useState<Word[]>(() => [pickRandomWord()]);
   const [historyIdx, setHistoryIdx] = useState<number>(0);
@@ -64,11 +64,10 @@ export function Game5({
   const [input, setInput] = useState<string[]>([]);
   const [hidden, setHidden] = useState<boolean[]>(() => Array(target.pt.length).fill(false));
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [popKey, setPopKey] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
   const hadResetRef = useRef(false);
-  const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelAdvanceRef = useRef<(() => void) | null>(null);
   const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const langRef = useRef(language);
 
@@ -77,26 +76,14 @@ export function Game5({
   }, [language]);
 
   const shakeX = useSharedValue(0);
-  const celebrateScale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }, { scale: celebrateScale.value }],
+    transform: [{ translateX: shakeX.value }],
   }));
 
   useEffect(() => {
     speakText(target.pt, { language: langRef.current });
   }, [wordEpoch, target.pt]);
-
-  useEffect(() => {
-    if (popKey <= 0 || reduceMotion) return undefined;
-    celebrateScale.set(
-      withSequence(
-        withSpring(1.04, { damping: 12, stiffness: 280 }),
-        withSpring(1, { damping: 14, stiffness: 260 }),
-      ),
-    );
-    return () => cancelAnimation(celebrateScale);
-  }, [popKey, reduceMotion, celebrateScale]);
 
   useEffect(() => {
     if (shakeKey <= 0 || reduceMotion) return undefined;
@@ -114,14 +101,16 @@ export function Game5({
 
   useEffect(() => {
     return () => {
-      if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+      cancelAdvanceRef.current?.();
+      cancelAdvanceRef.current = null;
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       cancelSpeech();
     };
   }, []);
 
   const applyLoadedWord = useCallback((word: Word) => {
-    if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+    cancelAdvanceRef.current?.();
+    cancelAdvanceRef.current = null;
     if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
     hadResetRef.current = false;
     const sc = scrambleWord(word);
@@ -189,13 +178,15 @@ export function Game5({
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         const points = scoreGame5(target.pt.length, hadResetRef.current);
         onScore?.(points);
-        speakText(target.pt, { language });
-        setPopKey((k) => k + 1);
 
-        if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
-        nextTimerRef.current = setTimeout(() => {
-          loadNew();
-        }, 1200);
+        cancelAdvanceRef.current?.();
+        cancelAdvanceRef.current = speakAndSchedule(target.pt, {
+          language,
+          minDelayMs: 950,
+          postSpeechPauseMs: 250,
+          fallbackMs: 2600,
+          onAdvance: loadNew,
+        });
       } else {
         hadResetRef.current = true;
         setFeedback('wrong');
@@ -216,6 +207,19 @@ export function Game5({
   const remaining = Math.max(0, target.pt.length - input.length);
   const slots =
     input.join(' ') + (input.length > 0 ? ' ' : '') + '_ '.repeat(remaining).trimEnd();
+
+  const tileRowMaxWidth = Math.max(240, Math.min(windowWidth - 92, 380));
+  const letterCount = Math.max(1, scrambled.length);
+  const tileGap = letterCount >= 7 ? 5 : 7;
+  const tileWidth = Math.max(
+    28,
+    Math.min(
+      50,
+      Math.floor((tileRowMaxWidth - tileGap * (letterCount - 1)) / letterCount),
+    ),
+  );
+  const tileHeight = Math.max(44, Math.min(50, tileWidth + 6));
+  const tileFontSize = tileWidth >= 46 ? 22 : tileWidth >= 38 ? 19 : 17;
 
   return (
     <Animated.View style={[styles.card, animStyle]}>
@@ -253,6 +257,9 @@ export function Game5({
             styles.slotsText,
             (feedback === 'correct' || feedback === 'wrong') && styles.slotsTextLight,
           ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
           maxFontSizeMultiplier={1.2}
         >
           {slots}
@@ -263,7 +270,7 @@ export function Game5({
         {isTr ? `Anlamı: ${target.tr}` : `Meaning: ${target.en}`}
       </Text>
 
-      <View style={styles.tilesPool}>
+      <View style={[styles.tilesPool, { gap: tileGap }]}>
         {scrambled.map((char, idx) => {
           const isHidden = Boolean(hidden[idx]);
           return (
@@ -274,13 +281,18 @@ export function Game5({
               accessibilityRole="button"
               accessibilityLabel={char}
               accessibilityState={{ disabled: isHidden || feedback === 'correct' }}
+              hitSlop={4}
               style={({ pressed }) => [
                 styles.tileBtn,
+                { width: tileWidth, height: tileHeight },
                 isHidden && styles.tileHidden,
                 pressed && !isHidden && feedback !== 'correct' && styles.pressed,
               ]}
             >
-              <Text style={styles.tileText} maxFontSizeMultiplier={1.2}>
+              <Text
+                style={[styles.tileText, { fontSize: tileFontSize }]}
+                maxFontSizeMultiplier={1.15}
+              >
                 {isHidden ? '' : char}
               </Text>
             </Pressable>
@@ -396,15 +408,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tileBtn: {
-    minWidth: touchTargets.min,
-    minHeight: touchTargets.min,
     borderRadius: radii.md,
     borderWidth: 2,
     borderColor: colors.orange,
     backgroundColor: '#fff7ed',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
     ...shadows.sm,
   },
   tileHidden: {

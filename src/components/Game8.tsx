@@ -710,7 +710,7 @@ export function Game8({
                 disabled={activeWordCompleted}
                 accessibilityRole="button"
                 accessibilityLabel={isTr ? 'İpucu' : 'Hint'}
-                hitSlop={4}
+                hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
                 style={({ pressed }) => [
                   styles.actionBtn,
                   styles.hintAction,
@@ -727,6 +727,7 @@ export function Game8({
                 onPress={handleCheck}
                 accessibilityRole="button"
                 accessibilityLabel={isTr ? 'Kontrol' : 'Check'}
+                hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
                 style={({ pressed }) => [styles.actionBtn, styles.checkAction, pressed && styles.pressed]}
               >
                 <Text style={[styles.actionBtnText, styles.checkActionText]} maxFontSizeMultiplier={1.1}>
@@ -738,6 +739,7 @@ export function Game8({
                 onPress={handleRevealAll}
                 accessibilityRole="button"
                 accessibilityLabel={isTr ? 'Çözüm' : 'Solve'}
+                hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
                 style={({ pressed }) => [styles.actionBtn, styles.solveAction, pressed && styles.pressed]}
               >
                 <Text style={[styles.actionBtnText, styles.solveActionText]} maxFontSizeMultiplier={1.1}>

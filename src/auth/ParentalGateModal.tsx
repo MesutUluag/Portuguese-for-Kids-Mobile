@@ -28,8 +28,8 @@ interface Challenge {
 }
 
 function generateChallenge(): Challenge {
-  const left = 13 + Math.floor(Math.random() * 12); // 13..24
-  const right = 12 + Math.floor(Math.random() * 8); // 12..19
+  const left = 11 + Math.floor(Math.random() * 6); // 11..16
+  const right = 3 + Math.floor(Math.random() * 3); // 3..5
   return { left, right, answer: left * right };
 }
 
