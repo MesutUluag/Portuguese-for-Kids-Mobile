@@ -14,7 +14,7 @@ npx expo install <pkg>     # ALWAYS install native/Expo deps via expo install
 npm run sync-core          # Sync core TS data from ../Portugese-for-Kids
 npm run sync-core:check    # Verify zero drift against ../Portugese-for-Kids
 npm run typecheck          # tsc -b && tsc --noEmit
-npm run lint               # expo lint
+npm run lint               # eslint .
 npm test                   # Jest (jest-expo)
 npx expo-doctor            # Diagnose SDK/config issues
 ```
@@ -24,11 +24,12 @@ npx expo-doctor            # Diagnose SDK/config issues
 ## 1. Architecture & Code Structure
 - **Navigation model:** State-driven mode switcher in `src/App.tsx` (matching the web app — **do not** add Expo Router unless explicitly requested).
 - **Feature folders:** `src/auth/`, `src/story/`, `src/components/`, `src/audio/`, `src/api/`, `src/data/`, `src/theme/`, `src/utils/`. Shared UI lives in `src/commons/`.
-- **`src/core/` & `src/data/marketItems.mobile.ts` are generated:** **Never** edit them by hand. Update `../Portugese-for-Kids`, then run `npm run sync-core`. CI fails on drift.
+- **`src/core/` & `src/data/marketItems.mobile.ts` are generated:** **Never** edit them by hand. Update `../Portugese-for-Kids`, then run `npm run sync-core`. CI fails on drift or `core.lock.json` hash mismatch.
 - **Continuous Native Generation:** Never commit `ios/` or `android/`. Configure native behavior in `app.config.ts` and config plugins.
+- **Metro Resolver & RN 0.88 Package Exports (`metro.config.js`):** Never set `unstable_enablePackageExports = false` (breaks `react-native/asset-registry` and Firebase `react-native` entrypoints).
 - **Strict TypeScript:** Root app uses `"strict": true` + `"noUncheckedIndexedAccess": true` (synced `src/core/` uses `tsconfig.core.json` with `"strict": true`). No `any`; use `unknown` + narrowing at API boundaries.
 - **Path alias:** Use `@/` (`./src/*`). Avoid deep relative imports (`../../../`).
-- **Single sources of truth:** `Mode` union in `src/core/data/types.ts`, `StoryContext` + `CONTEXT_TOPICS` in `src/core/data/storyTopics.ts`, API URLs in `src/config.ts`, colours/radii/spacing in `src/theme/tokens.ts`.
+- **Single sources of truth:** `Mode` union in `src/core/data/types.ts`, `StoryContext` + `CONTEXT_TOPICS` in `src/core/data/storyTopics.ts`, API/policy URLs in `src/config.ts`, colours/radii/spacing in `src/theme/tokens.ts`.
 - **Bilingual by contract:** Every screen, game, and `accessibilityLabel` receives and respects `language: 'en' | 'tr'`.
 - **Speech via wrapper only:** Call `speakText` / `cancelSpeech` from `src/audio/speech.ts` (never call `expo-speech` directly in screens/games); every game calls `cancelSpeech()` on unmount.
 - **Game contract:** Every game renders `GameScoreBadge` and reports points via `onScore(pts)`. Scoring functions are pure and unit-tested.

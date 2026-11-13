@@ -37,8 +37,8 @@ jobs:
           if [ -d "web-repo" ]; then
             node scripts/sync-core.mjs --source ./web-repo --check
           else
-            echo "Sibling web repo unavailable in this runner; verifying core files exist."
-            test -f core.lock.json
+            echo "Sibling web repo unavailable in this runner; verifying core.lock.json SHA-256 hashes."
+            node scripts/sync-core.mjs --verify-lock
           fi
 
       - name: TypeScript check

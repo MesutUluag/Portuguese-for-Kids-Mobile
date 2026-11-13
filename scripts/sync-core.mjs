@@ -21,6 +21,7 @@ const MOBILE_ROOT = path.resolve(__dirname, '..');
 
 const args = process.argv.slice(2);
 const CHECK_MODE = args.includes('--check');
+const VERIFY_LOCK_MODE = args.includes('--verify-lock');
 const sourceFlagIdx = args.indexOf('--source');
 const WEB_ROOT = path.resolve(
   MOBILE_ROOT,
@@ -265,7 +266,44 @@ function generateOutputs() {
   return generated;
 }
 
+function verifyLockFile() {
+  const lockPath = path.join(MOBILE_ROOT, 'core.lock.json');
+  if (!fs.existsSync(lockPath)) {
+    console.error('core.lock.json is missing.');
+    process.exit(1);
+  }
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  const outputs = lock.outputs ?? {};
+  const entries = Object.entries(outputs);
+  if (entries.length === 0) {
+    console.error('core.lock.json contains no output hashes.');
+    process.exit(1);
+  }
+  const diffs = [];
+  for (const [relPath, expectedHash] of entries) {
+    const fullPath = path.join(MOBILE_ROOT, relPath);
+    if (!fs.existsSync(fullPath)) {
+      diffs.push(`MISSING: ${relPath}`);
+      continue;
+    }
+    const actualHash = sha256(fs.readFileSync(fullPath, 'utf8'));
+    if (actualHash !== expectedHash) {
+      diffs.push(`HASH_MISMATCH: ${relPath}`);
+    }
+  }
+  if (diffs.length > 0) {
+    console.error('sync-core lock verification failed:\n' + diffs.join('\n'));
+    process.exit(1);
+  }
+  console.log(`core.lock.json verified (${entries.length} hashed outputs).`);
+}
+
 function main() {
+  if (VERIFY_LOCK_MODE) {
+    verifyLockFile();
+    return;
+  }
+
   const generated = generateOutputs();
 
   if (CHECK_MODE) {

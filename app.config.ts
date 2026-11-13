@@ -21,13 +21,17 @@ const withDevCleartextTraffic: ConfigPlugin = (config) => {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const buildProfile = process.env.EAS_BUILD_PROFILE;
+  const buildPlatform = process.env.EAS_BUILD_PLATFORM;
   const iosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
   if (
     !iosUrlScheme &&
-    (buildProfile === 'preview' || buildProfile === 'production')
+    buildPlatform === 'ios' &&
+    (buildProfile === 'preview' ||
+      buildProfile === 'internal' ||
+      buildProfile === 'production')
   ) {
     throw new Error(
-      `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is required for EAS "${buildProfile}" builds.`,
+      `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME is required for EAS iOS "${buildProfile}" builds.`,
     );
   }
   const resolvedIosUrlScheme =

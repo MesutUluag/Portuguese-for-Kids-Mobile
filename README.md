@@ -52,7 +52,7 @@ Companion repositories:
 2. Fill in your Firebase Web config (`EXPO_PUBLIC_FIREBASE_*`) and Google OAuth client IDs (`EXPO_PUBLIC_GOOGLE_*`).
 3. Optional: set `EXPO_PUBLIC_API_BASE_URL` to override the production Cloud Run API URL configured in `src/config.ts` (for example `http://10.0.2.2:8081/api` on the Android emulator).
 
-> Preview and production EAS builds enforce `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` in `app.config.ts`.
+> Preview and production EAS iOS builds enforce `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` in `app.config.ts`.
 
 ---
 
@@ -83,7 +83,8 @@ npx expo start --dev-client --clear
 | Profile | Distribution | Usage |
 |---|---|---|
 | `development` | Internal (`developmentClient: true`) | Android APK / iOS simulator dev client builds |
-| `preview` | Internal (`apk` on Android) | QA & device testing builds |
+| `preview` | Internal (`apk` on Android) | QA & direct APK sideload testing builds |
+| `internal` | Internal (`app-bundle` on Android) | Signed `.aab` builds for Play Store Internal Testing |
 | `production` | Store (`autoIncrement: true`) | Play Store / App Store release builds |
 
 ```bash
@@ -133,18 +134,20 @@ Portugese-for-Kids-Mobile/
 │   ├── items/                    # Pre-rasterized 256×256 PNG illustrations for mobile games
 │   └── music/                    # 96 kbps kids background music MP3 tracks
 └── src/
-    ├── App.tsx                   # Phase 0 spike host shell (SafeArea + GestureHandlerRootView)
-    ├── config.ts                 # API base URL & dev flag
+    ├── App.tsx                   # Mode switcher & auth-gated learning shell
+    ├── api/client.ts             # Centralised HTTP client (timeout, 401 refresh, schema guard)
+    ├── auth/                     # Firebase Auth, parental gate, nickname picker, stats & leaderboard
+    ├── config.ts                 # API, reset & privacy policy URLs + __DEV__ flag
     ├── core/                     # Auto-synced TypeScript datasets & generators from web repo
     ├── data/
     │   ├── marketItems.mobile.ts # Synced market items (alcohol-free mobile filter)
     │   └── __tests__/
     ├── spikes/
-    │   ├── FirebasePersistenceSpike.tsx # Spike A: AsyncStorage Firebase Auth persistence test
-    │   └── SkiaJigsawSpike.tsx          # Spike B: 60fps Skia + Reanimated 3×3 jigsaw test
+    │   └── SkiaJigsawSpike.tsx   # Phase 0 60fps Skia + Reanimated jigsaw reference (for Phase 4)
     ├── theme/tokens.ts           # Colour palette, radii, spacing & >=56pt touch targets
     ├── types/firebase-auth-rn.d.ts
     └── utils/
+        ├── storage.ts            # Validated AsyncStorage key registry & app-scoped wipe
         ├── jigsawGeometry.ts     # Pure jigsaw grid & tab geometry helpers
         ├── jigsawPath.ts         # Skia path builder for jigsaw piece clipping
         └── __tests__/
