@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   STUDY_DATE: 'kids_study_time_date',
   STUDY_SECONDS: 'kids_study_time_seconds',
   PT_VOICE_HINT_SHOWN: 'kids_pt_voice_hint_shown_v1',
+  WIKI_IMAGE_CACHE: 'kids_wiki_img_cache_v1',
   STORY_HISTORY_PREFIX: 'story_history_',
   NICKNAME_CONFIRMED_PREFIX: 'kids_nickname_confirmed_v1_',
 } as const;
@@ -86,6 +87,7 @@ export async function clearAppStorage(): Promise<void> {
       STORAGE_KEYS.STUDY_DATE,
       STORAGE_KEYS.STUDY_SECONDS,
       STORAGE_KEYS.PT_VOICE_HINT_SHOWN,
+      STORAGE_KEYS.WIKI_IMAGE_CACHE,
       STORAGE_KEYS.STORY_HISTORY_PREFIX,
       STORAGE_KEYS.NICKNAME_CONFIRMED_PREFIX,
     ];

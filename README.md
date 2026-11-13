@@ -136,7 +136,10 @@ Portugese-for-Kids-Mobile/
 └── src/
     ├── App.tsx                   # Mode switcher & auth-gated learning shell
     ├── api/client.ts             # Centralised HTTP client (timeout, 401 refresh, schema guard)
+    ├── audio/speech.ts           # expo-speech European Portuguese TTS + silent-mode audio session
     ├── auth/                     # Firebase Auth, parental gate, nickname picker, stats & leaderboard
+    ├── commons/                  # Shared UI components (GameScoreBadge, LoadingSpinner, WordImage)
+    ├── components/               # Learning game screens (Game1..Game5, Game8 Crossword)
     ├── config.ts                 # API, reset & privacy policy URLs + __DEV__ flag
     ├── core/                     # Auto-synced TypeScript datasets & generators from web repo
     ├── data/
@@ -147,7 +150,9 @@ Portugese-for-Kids-Mobile/
     ├── theme/tokens.ts           # Colour palette, radii, spacing & >=56pt touch targets
     ├── types/firebase-auth-rn.d.ts
     └── utils/
-        ├── storage.ts            # Validated AsyncStorage key registry & app-scoped wipe
+        ├── storage.ts            # Validated AsyncStorage key registry (incl. WIKI_IMAGE_CACHE) & wipe
+        ├── gameScoring.ts        # Pure scoring formulas for Games 1–5 & 8 (board bonus = 25)
+        ├── useWikiImage.ts       # Curated Wikimedia thumbnail loader with AsyncStorage cache
         ├── jigsawGeometry.ts     # Pure jigsaw grid & tab geometry helpers
         ├── jigsawPath.ts         # Skia path builder for jigsaw piece clipping
         └── __tests__/

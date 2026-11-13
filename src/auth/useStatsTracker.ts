@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import * as Crypto from 'expo-crypto';
@@ -8,6 +8,7 @@ import {
   buildSyncPayload,
   createEmptyOutbox,
   deductSentDeltas,
+  getLocalDateString,
   hasOutboxDeltas,
   isTelemetryOutbox,
   resolveOutboxForUid,
@@ -44,6 +45,8 @@ export function useStatsTracker(currentMode: Mode) {
   );
   const modeRef = useRef<Mode>(currentMode);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [unsyncedSeconds, setUnsyncedSeconds] = useState(0);
+  const [unsyncedScoreByMode, setUnsyncedScoreByMode] = useState<Partial<Record<Mode, number>>>({});
 
   useEffect(() => {
     currentUidRef.current = currentUid;
@@ -81,6 +84,8 @@ export function useStatsTracker(currentMode: Mode) {
       saveTimerRef.current = null;
     }
     outboxRef.current = createEmptyOutbox('guest');
+    setUnsyncedSeconds(0);
+    setUnsyncedScoreByMode({});
   }, []);
 
   const flush = useCallback(async (): Promise<void> => {
@@ -107,6 +112,8 @@ export function useStatsTracker(currentMode: Mode) {
       setProfile(updatedProfile);
       const remaining = deductSentDeltas(outboxRef.current, payload);
       outboxRef.current = remaining;
+      setUnsyncedSeconds(remaining.activeSecondsDelta);
+      setUnsyncedScoreByMode({ ...remaining.scoreByModeDelta });
       persistOutboxNow(remaining);
     } catch (err) {
       console.warn('[telemetry] Sync error (kept in outbox with batchId):', err);
@@ -124,6 +131,8 @@ export function useStatsTracker(currentMode: Mode) {
         const resolved = resolveOutboxForUid(loaded, currentUidRef.current);
         outboxRef.current = resolved;
         outboxReadyRef.current = true;
+        setUnsyncedSeconds(resolved.activeSecondsDelta);
+        setUnsyncedScoreByMode({ ...resolved.scoreByModeDelta });
         if (loaded && loaded.ownerUid !== resolved.ownerUid) {
           persistOutboxNow(resolved);
         }
@@ -174,6 +183,7 @@ export function useStatsTracker(currentMode: Mode) {
       const mode = modeRef.current;
       outbox.activeSecondsDelta += 1;
       outbox.timeByModeDelta[mode] = (outbox.timeByModeDelta[mode] ?? 0) + 1;
+      setUnsyncedSeconds(outbox.activeSecondsDelta);
       scheduleSaveOutbox();
     }, 1000);
 
@@ -260,6 +270,7 @@ export function useStatsTracker(currentMode: Mode) {
         (outbox.scoreByModeDelta[mode] ?? 0) + pts;
       outbox.gamesCompletedDelta[mode] =
         (outbox.gamesCompletedDelta[mode] ?? 0) + 1;
+      setUnsyncedScoreByMode({ ...outbox.scoreByModeDelta });
       persistOutboxNow(outbox);
       void flush();
     },
@@ -269,11 +280,14 @@ export function useStatsTracker(currentMode: Mode) {
   const getScoreForMode = useCallback(
     (mode: Mode): number => {
       const stored = profile?.stats?.scoreByMode?.[mode] ?? 0;
-      const unsynced = outboxRef.current.scoreByModeDelta?.[mode] ?? 0;
+      const unsynced = unsyncedScoreByMode[mode] ?? 0;
       return stored + unsynced;
     },
-    [profile],
+    [profile, unsyncedScoreByMode],
   );
+
+  const todayTimeSeconds =
+    (profile?.stats?.dailyTimeSeconds?.[getLocalDateString()] ?? 0) + unsyncedSeconds;
 
   const recordSpeechListen = useCallback(() => {
     const outbox = outboxRef.current;
@@ -287,6 +301,7 @@ export function useStatsTracker(currentMode: Mode) {
     recordGameScore,
     recordSpeechListen,
     getScoreForMode,
+    todayTimeSeconds,
     flushNow: flush,
   };
 }
