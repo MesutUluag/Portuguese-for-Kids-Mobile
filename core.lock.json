@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "excludedMarketItems": [
+    "wine",
+    "beer"
+  ],
+  "sources": {
+    "src/data/adverbData.ts": "9453ab9d3f37e478002056d2d28150084bb5916dc5ef3ccd21f51c44f02c8680",
+    "src/data/marketItems.ts": "3bdeb16bf3128b8694b29332387cc714261d2ec73a545795795d1410f4f03f30",
+    "src/data/prepGroups.ts": "6de66e6a39d43bd37cfeea5936f1cb04ac44e8a8b8b823112203ef272eb3dd58",
+    "src/data/storyData.ts": "0b7cc02733d4d90c4aa8bf5492832a4d1eaa78974da925f71ad5a05e34c366d4",
+    "src/data/types.ts": "ac109df35a5d85211d29ea8d646e809a6958ef72d5d26450bce1dda7afe2aed7",
+    "src/data/verbConjugations.ts": "5d48e7816a986f88a116ce99e93c15d7829f0ff9b194d5280d361c7ab477c588",
+    "src/data/words.ts": "fadf7986979f4838d9678f89bc79c1cffdce40b6184707bec7f42fbfab1d8927",
+    "src/story/sceneTheme.ts": "fcca2108cf162ca7d99605d9f537a5eac7a401c144fde6455ba29ea09f536feb",
+    "src/utils/ai.ts": "9c6a5f025ed0fec25182ebb1904c8b0a26e28049120809f3736afba35037f49f",
+    "src/utils/crosswordGenerator.ts": "4f81c743fc0e99e8f20aa50926508d589e90948ded70de0e41ef8729e60212c4"
+  },
+  "outputs": {
+    "src/core/data/adverbData.ts": "8d31f679811621fdf65ea65dfa8c74b82a9fde75416eb857eba9716d166e2062",
+    "src/core/data/index.ts": "68133e9a5810514a2fc42d79741aa8b15cfaadd1d7406584d744f49cd493f6d5",
+    "src/core/data/prepGroups.ts": "10a981e1d4e580a0ad417bf72dd91c517fa88a09ffc920def3794900a5e5c1f4",
+    "src/core/data/storyData.ts": "f6bd432ea706ce55c86ae2732221f8d3ffa0f8cd1d0b1eab52305e042629e593",
+    "src/core/data/storyTopics.ts": "1a79e1c0765b1411b6d0585cc70bcc61279eeae4019bd596c2f97f6173979910",
+    "src/core/data/types.ts": "7c532ed40ded27e4fb9e7d0e79705435c90431cdf9e7294383c98484cc954ac4",
+    "src/core/data/verbConjugations.ts": "b254a743a77303d5aa3a15c20b5eb4ac587d20d448747b5fb3c59f21af05ac50",
+    "src/core/data/words.ts": "cb814ae29068068ab6192717c0a42ebe66f3723a6370bee812166e2843be13e6",
+    "src/core/story/sceneTheme.ts": "85b54e1153e6631f8d0e69bfea03e58ef68c4599ab36a02a1c8ea3db615253d6",
+    "src/core/utils/crosswordGenerator.ts": "8662df0047b81b39085333a24115cba4b80d663c4c32ba76a01701e9fbc39167",
+    "src/data/marketItems.mobile.ts": "48ae6823c930370aacfa8461af36792d464e5233cdf55e2ab26d4588ebac3644"
+  }
+}
