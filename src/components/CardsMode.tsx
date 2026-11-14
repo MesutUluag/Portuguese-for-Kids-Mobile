@@ -40,7 +40,7 @@ export interface CardsModeProps {
   listHeader?: React.ReactElement | null;
 }
 
-const CARD_HEIGHT = 138;
+const CARD_HEIGHT = 146;
 const CARD_GAP = 10;
 const ROW_HEIGHT = CARD_HEIGHT + CARD_GAP;
 
@@ -196,7 +196,7 @@ const FlashCard = React.memo(function FlashCard({
       ]}
     >
       <View style={styles.soundIconWrap} pointerEvents="none">
-        <Volume2 size={13} strokeWidth={2.2} color={colors.textMuted} />
+        <Volume2 size={14} strokeWidth={2.2} color={colors.textMuted} />
       </View>
 
       {isNumberBadge ? (
@@ -219,7 +219,7 @@ const FlashCard = React.memo(function FlashCard({
         style={styles.ptText}
         numberOfLines={2}
         adjustsFontSizeToFit
-        minimumFontScale={0.75}
+        minimumFontScale={0.72}
         maxFontSizeMultiplier={1.2}
       >
         {word.pt}
@@ -239,6 +239,8 @@ const FlashCard = React.memo(function FlashCard({
         <Text
           style={[styles.enText, (hasCornerBtn || word.gender) && styles.enTextCornerPad]}
           numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.82}
           maxFontSizeMultiplier={1.15}
         >
           {translation}
@@ -707,9 +709,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 3.5,
     borderColor: colors.amberPale,
-    paddingHorizontal: 8,
-    paddingTop: 10,
-    paddingBottom: 16,
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -728,48 +730,50 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   emoji: {
-    fontSize: 36,
+    fontSize: 44,
     marginBottom: 4,
-    lineHeight: 42,
+    lineHeight: 50,
   },
   numberBadge: {
     backgroundColor: colors.amberPale,
     borderWidth: 2,
     borderColor: colors.amberLight,
     borderRadius: radii.sm,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     marginBottom: 5,
   },
   numberBadgeText: {
-    fontSize: 20,
+    fontSize: 23,
     fontWeight: '900',
     color: colors.navy,
     letterSpacing: -0.4,
   },
   ptText: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 19,
     fontWeight: '800',
     color: colors.navy,
     textAlign: 'center',
     marginBottom: 2,
   },
   enText: {
-    fontSize: 11,
+    fontSize: 12.5,
+    lineHeight: 15,
     fontWeight: '700',
     color: colors.textMuted,
     textAlign: 'center',
   },
   enTextCornerPad: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   enTextVerb: {
     paddingRight: 24,
     paddingLeft: 4,
-    lineHeight: 14,
+    lineHeight: 15,
   },
   enParenText: {
-    fontSize: 9.5,
+    fontSize: 10.5,
     fontWeight: '700',
     color: colors.textMuted,
   },
