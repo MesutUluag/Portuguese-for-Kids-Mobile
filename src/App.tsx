@@ -35,6 +35,7 @@ import { useBackgroundMusic } from '@/audio/backgroundMusic';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { AuthModalsHost } from '@/auth/AuthModalsHost';
 import { useStatsTracker } from '@/auth/useStatsTracker';
+import { CardsMode } from '@/components/CardsMode';
 import { Game1 } from '@/components/Game1';
 import { Game2 } from '@/components/Game2';
 import { Game3 } from '@/components/Game3';
@@ -42,7 +43,6 @@ import { Game4 } from '@/components/Game4';
 import { Game5 } from '@/components/Game5';
 import { Game8 } from '@/components/Game8';
 import { IS_DEV } from '@/config';
-import { kidsWords } from '@/core/data/index';
 import type { Mode } from '@/core/data/types';
 import { colors, radii, shadows, spacing, touchTargets } from '@/theme/tokens';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
@@ -278,268 +278,273 @@ function AppShell() {
     setCurrentMode(mode);
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea} onTouchStartCapture={notifyInteraction}>
-      <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.topBar}>
-          <View style={styles.appHeaderRow}>
-            <Text style={styles.brandTitle} maxFontSizeMultiplier={1.25}>
-              {isTr ? 'Portekizce Çocuk Oyun Alanı' : 'Portuguese Kids Playground'}
-            </Text>
-            <View style={styles.headerControls}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isTr ? 'İngilizceye geç' : 'Switch to Turkish'
-                }
-                onPress={toggleLanguage}
-                hitSlop={6}
-                style={({ pressed }) => [styles.headerUtilityBtn, pressed && styles.pressed]}
-              >
-                <Globe size={14} strokeWidth={2} color="#92400e" />
-                <Text style={styles.langToggleText} maxFontSizeMultiplier={1.2}>
-                  {isTr ? 'EN' : 'TR'}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  musicEnabled
-                    ? isTr
-                      ? 'Müziği kapat'
-                      : 'Stop music'
-                    : isTr
-                      ? 'Müziği aç'
-                      : 'Play music'
-                }
-                onPress={toggleMusic}
-                hitSlop={6}
-                style={({ pressed }) => [
-                  styles.headerUtilityBtn,
-                  styles.soundToggleBtn,
-                  pressed && styles.pressed,
-                ]}
-              >
-                {musicEnabled ? (
-                  <Volume2 size={15} strokeWidth={2.2} color="#92400e" />
-                ) : (
-                  <VolumeX size={15} strokeWidth={2.2} color="#92400e" />
-                )}
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.topStatsBar}>
-            <StudyTimeBadge
-              isTr={isTr}
-              getTodayTimeSeconds={getTodayTimeSeconds}
-              subscribeTodayTimeSeconds={subscribeTodayTimeSeconds}
-            />
+  const headerContent = (
+    <>
+      <View style={styles.topBar}>
+        <View style={styles.appHeaderRow}>
+          <Text style={styles.brandTitle} maxFontSizeMultiplier={1.25}>
+            {isTr ? 'Portekizce Çocuk Oyun Alanı' : 'Portuguese Kids Playground'}
+          </Text>
+          <View style={styles.headerControls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                isTr ? 'İngilizceye geç' : 'Switch to Turkish'
+              }
+              onPress={toggleLanguage}
+              hitSlop={6}
+              style={({ pressed }) => [styles.headerUtilityBtn, pressed && styles.pressed]}
+            >
+              <Globe size={14} strokeWidth={2} color="#92400e" />
+              <Text style={styles.langToggleText} maxFontSizeMultiplier={1.2}>
+                {isTr ? 'EN' : 'TR'}
+              </Text>
+            </Pressable>
 
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
-                isTr ? 'Liderlik Tablosu & Puanlar' : 'Leaderboard & Scores'
+                musicEnabled
+                  ? isTr
+                    ? 'Müziği kapat'
+                    : 'Stop music'
+                  : isTr
+                    ? 'Müziği aç'
+                    : 'Play music'
               }
-              onPress={openLeaderboardModal}
-              hitSlop={4}
-              style={({ pressed }) => [styles.rankPill, pressed && styles.pressed]}
+              onPress={toggleMusic}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.headerUtilityBtn,
+                styles.soundToggleBtn,
+                pressed && styles.pressed,
+              ]}
             >
-              <Trophy size={14} strokeWidth={2.4} color="#d97706" />
-              <Text style={styles.rankScoreText} maxFontSizeMultiplier={1.2}>
-                {totalScore}
+              {musicEnabled ? (
+                <Volume2 size={15} strokeWidth={2.2} color="#92400e" />
+              ) : (
+                <VolumeX size={15} strokeWidth={2.2} color="#92400e" />
+              )}
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.topStatsBar}>
+          <StudyTimeBadge
+            isTr={isTr}
+            getTodayTimeSeconds={getTodayTimeSeconds}
+            subscribeTodayTimeSeconds={subscribeTodayTimeSeconds}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              isTr ? 'Liderlik Tablosu & Puanlar' : 'Leaderboard & Scores'
+            }
+            onPress={openLeaderboardModal}
+            hitSlop={4}
+            style={({ pressed }) => [styles.rankPill, pressed && styles.pressed]}
+          >
+            <Trophy size={14} strokeWidth={2.4} color="#d97706" />
+            <Text style={styles.rankScoreText} maxFontSizeMultiplier={1.2}>
+              {totalScore}
+            </Text>
+            <View style={styles.rankDivider} />
+            <Text style={styles.rankLabelText} maxFontSizeMultiplier={1.2}>
+              {isTr ? 'Sıralama' : 'Ranks'}
+            </Text>
+          </Pressable>
+
+          {user ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                isTr ? 'Profil ve İstatistikler' : 'Profile & Stats'
+              }
+              onPress={openStatsModal}
+              hitSlop={4}
+              style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}
+            >
+              <Flame size={14} strokeWidth={2.4} color="#ea580c" />
+              <Text style={styles.streakText} maxFontSizeMultiplier={1.2}>
+                {streakCount}
               </Text>
-              <View style={styles.rankDivider} />
-              <Text style={styles.rankLabelText} maxFontSizeMultiplier={1.2}>
-                {isTr ? 'Sıralama' : 'Ranks'}
+              <View style={styles.profileDivider} />
+              <Text
+                style={styles.profileNameText}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
+              >
+                {profileFirstName}
               </Text>
             </Pressable>
-
-            {user ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isTr ? 'Profil ve İstatistikler' : 'Profile & Stats'
-                }
-                onPress={openStatsModal}
-                hitSlop={4}
-                style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}
-              >
-                <Flame size={14} strokeWidth={2.4} color="#ea580c" />
-                <Text style={styles.streakText} maxFontSizeMultiplier={1.2}>
-                  {streakCount}
-                </Text>
-                <View style={styles.profileDivider} />
-                <Text
-                  style={styles.profileNameText}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {profileFirstName}
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={isTr ? 'Giriş Yap' : 'Sign In'}
-                onPress={() => openAuthModal()}
-                hitSlop={4}
-                style={({ pressed }) => [styles.authPromptPill, pressed && styles.pressed]}
-              >
-                <LogIn size={14} strokeWidth={2.2} color="#1d4ed8" />
-                <Text style={styles.authPromptText} maxFontSizeMultiplier={1.2}>
-                  {isTr ? 'Giriş Yap' : 'Sign In'}
-                </Text>
-              </Pressable>
-            )}
-          </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isTr ? 'Giriş Yap' : 'Sign In'}
+              onPress={() => openAuthModal()}
+              hitSlop={4}
+              style={({ pressed }) => [styles.authPromptPill, pressed && styles.pressed]}
+            >
+              <LogIn size={14} strokeWidth={2.2} color="#1d4ed8" />
+              <Text style={styles.authPromptText} maxFontSizeMultiplier={1.2}>
+                {isTr ? 'Giriş Yap' : 'Sign In'}
+              </Text>
+            </Pressable>
+          )}
         </View>
+      </View>
 
-        <View style={styles.modeNav}>
-          {NAV_MODES.map((item) => {
-            const active = currentMode === item.mode;
-            const locked = item.mode !== 'cards' && !user;
-            const label = isTr ? item.labelTr : item.labelEn;
-            const IconComponent = item.Icon;
-            return (
-              <View
-                key={item.mode}
-                style={[
-                  styles.modeBtnRing,
-                  active && {
-                    borderColor: item.bg,
-                    transform: [{ scale: 1.05 }],
+      <View style={styles.modeNav}>
+        {NAV_MODES.map((item) => {
+          const active = currentMode === item.mode;
+          const locked = item.mode !== 'cards' && !user;
+          const label = isTr ? item.labelTr : item.labelEn;
+          const IconComponent = item.Icon;
+          return (
+            <View
+              key={item.mode}
+              style={[
+                styles.modeBtnRing,
+                active && {
+                  borderColor: item.bg,
+                  transform: [{ scale: 1.05 }],
+                },
+              ]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={label}
+                onPress={() => handleSelectMode(item.mode)}
+                style={({ pressed }) => [
+                  styles.modeBtn,
+                  {
+                    backgroundColor: item.bg,
+                    borderColor: active ? colors.white : item.border,
                   },
+                  locked && styles.modeBtnLocked,
+                  pressed && styles.modeBtnPressed,
                 ]}
               >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={label}
-                  onPress={() => handleSelectMode(item.mode)}
-                  style={({ pressed }) => [
-                    styles.modeBtn,
-                    {
-                      backgroundColor: item.bg,
-                      borderColor: active ? colors.white : item.border,
-                    },
-                    locked && styles.modeBtnLocked,
-                    pressed && styles.modeBtnPressed,
-                  ]}
-                >
-                  {locked ? (
-                    <Lock size={13} strokeWidth={2.4} color={colors.white} />
-                  ) : null}
-                  <IconComponent size={17} strokeWidth={2.2} color={colors.white} />
-                  <Text maxFontSizeMultiplier={1.25} style={styles.modeBtnText}>
-                    {label}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
+                {locked ? (
+                  <Lock size={13} strokeWidth={2.4} color={colors.white} />
+                ) : null}
+                <IconComponent size={17} strokeWidth={2.2} color={colors.white} />
+                <Text maxFontSizeMultiplier={1.25} style={styles.modeBtnText}>
+                  {label}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+    </>
+  );
 
-        {currentMode === 'game1' ? (
-          <Game1
-            language={language}
-            score={getScoreForMode('game1')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game1', pts)}
-          />
-        ) : currentMode === 'game2' ? (
-          <Game2
-            language={language}
-            score={getScoreForMode('game2')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game2', pts)}
-          />
-        ) : currentMode === 'game3' ? (
-          <Game3
-            language={language}
-            score={getScoreForMode('game3')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game3', pts)}
-          />
-        ) : currentMode === 'game4' ? (
-          <Game4
-            language={language}
-            score={getScoreForMode('game4')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game4', pts)}
-          />
-        ) : currentMode === 'game5' ? (
-          <Game5
-            language={language}
-            score={getScoreForMode('game5')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game5', pts)}
-          />
-        ) : currentMode === 'game8' ? (
-          <Game8
-            language={language}
-            score={getScoreForMode('game8')}
-            recentGain={recentGain}
-            gainKey={gainKey}
-            onScore={(pts) => handleGameScore('game8', pts)}
-          />
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {currentMode === 'cards'
-                ? isTr
-                  ? 'Kartlar Modu (Misafirlere Açık)'
-                  : 'Flashcards Mode (Guest Open)'
-                : `${activeModeTitle} — ${isTr ? 'Oturum Açık' : 'Signed In'}`}
-            </Text>
-            <Text style={styles.cardDesc}>
-              {currentMode === 'cards'
-                ? isTr
-                  ? `${kidsWords.length} Avrupa Portekizcesi kelimesi senkronize edildi. Kartlar ve Hikaye ekranları Faz 2'de eklenecek.`
-                  : `${kidsWords.length} European Portuguese words are synced locally. Full Cards & Story UI rolls out in Phase 2.`
-                : isTr
+  return (
+    <SafeAreaView style={styles.safeArea} onTouchStartCapture={notifyInteraction}>
+      <StatusBar style="dark" />
+      {currentMode === 'cards' ? (
+        <CardsMode language={language} listHeader={headerContent} />
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          {headerContent}
+
+          {currentMode === 'game1' ? (
+            <Game1
+              language={language}
+              score={getScoreForMode('game1')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game1', pts)}
+            />
+          ) : currentMode === 'game2' ? (
+            <Game2
+              language={language}
+              score={getScoreForMode('game2')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game2', pts)}
+            />
+          ) : currentMode === 'game3' ? (
+            <Game3
+              language={language}
+              score={getScoreForMode('game3')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game3', pts)}
+            />
+          ) : currentMode === 'game4' ? (
+            <Game4
+              language={language}
+              score={getScoreForMode('game4')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game4', pts)}
+            />
+          ) : currentMode === 'game5' ? (
+            <Game5
+              language={language}
+              score={getScoreForMode('game5')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game5', pts)}
+            />
+          ) : currentMode === 'game8' ? (
+            <Game8
+              language={language}
+              score={getScoreForMode('game8')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game8', pts)}
+            />
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                {`${activeModeTitle} — ${isTr ? 'Oturum Açık' : 'Signed In'}`}
+              </Text>
+              <Text style={styles.cardDesc}>
+                {isTr
                   ? 'Bu oyun/hikaye ekranı sıradaki fazda eklenecek. Bu oturum aktif telemetri senkronizasyonunu doğrulayabilir.'
                   : 'This Game/Story UI arrives in its dedicated phase. Your active session and telemetry sync are live here.'}
-            </Text>
+              </Text>
 
-            {user ? (
-              <View style={styles.telemetryPreview}>
-                <Text style={styles.telemetryLabel}>
-                  {isTr
-                    ? `Aktif Kaşif: ${profile?.displayName ?? 'Yükleniyor...'} • Seri: ${profile?.stats.currentStreakDays ?? 1} gün`
-                    : `Explorer: ${profile?.displayName ?? 'Loading...'} • Streak: ${profile?.stats.currentStreakDays ?? 1}d`}
-                </Text>
-                {IS_DEV ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      isTr ? 'Örnek oyun puanı ekle ve senkronize et' : 'Test telemetry score sync'
-                    }
-                    onPress={() => {
-                      recordGameScore('game1', 5);
-                    }}
-                    style={({ pressed }) => [
-                      styles.syncTestBtn,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={styles.syncTestText}>
-                      {isTr ? '+5 Test Puanı Senkronize Et' : '+5 Test Telemetry Sync'}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        )}
-      </ScrollView>
+              {user ? (
+                <View style={styles.telemetryPreview}>
+                  <Text style={styles.telemetryLabel}>
+                    {isTr
+                      ? `Aktif Kaşif: ${profile?.displayName ?? 'Yükleniyor...'} • Seri: ${profile?.stats.currentStreakDays ?? 1} gün`
+                      : `Explorer: ${profile?.displayName ?? 'Loading...'} • Streak: ${profile?.stats.currentStreakDays ?? 1}d`}
+                  </Text>
+                  {IS_DEV ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isTr ? 'Örnek oyun puanı ekle ve senkronize et' : 'Test telemetry score sync'
+                      }
+                      onPress={() => {
+                        recordGameScore('game1', 5);
+                      }}
+                      style={({ pressed }) => [
+                        styles.syncTestBtn,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.syncTestText}>
+                        {isTr ? '+5 Test Puanı Senkronize Et' : '+5 Test Telemetry Sync'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       <AuthModalsHost language={language} />
     </SafeAreaView>

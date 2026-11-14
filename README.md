@@ -7,7 +7,7 @@ Companion repositories:
 - **Spring Boot backend:** `../Portugese-for-Kids-Backend`
 - **GitHub:** [MesutUluag/Portuguese-for-Kids-Mobile](https://github.com/MesutUluag/Portuguese-for-Kids-Mobile)
 
-> **Current Status — Phase 3 (Games 1–5, Crossword & Audio):** Phase 0 spikes, Phase 1 auth/stats/leaderboard, Phase 3 interactive games (**Game 1 Picture Quiz**, **Game 2 Listen & Find**, **Game 3 Memory Match**, **Game 4 Fill Missing Letter**, **Game 5 Unscramble Word**, **Game 8 Crossword**), European Portuguese TTS (`pt-PT`), background music, and Wikimedia thumbnail caching (`WordImage`) are live. Flashcards, AI Story Mode, Jigsaw (`Game 6`), and Market (`Game 7`) follow in upcoming phases.
+> **Current Status — Phase 2A + Phase 3 (Flashcards, Grammar Modals, Games 1–5, Crossword & Audio):** Phase 0 spikes, Phase 1 auth/stats/leaderboard, Phase 2A interactive flashcards (`CardsMode` with 646 words, noun gender badges, and **Verb Conjugation**, **Preposition Contraction**, and **Adverb Usage** modals), Phase 3 interactive games (**Game 1 Picture Quiz**, **Game 2 Listen & Find**, **Game 3 Memory Match**, **Game 4 Fill Missing Letter**, **Game 5 Unscramble Word**, **Game 8 Crossword**), European Portuguese TTS (`pt-PT`), background music, and Wikimedia thumbnail caching (`WordImage`) are live. AI Story Mode, Jigsaw (`Game 6`), and Market (`Game 7`) follow in upcoming phases.
 
 ---
 
@@ -141,7 +141,7 @@ Portugese-for-Kids-Mobile/
     │   └── speech.ts             # expo-speech European Portuguese TTS + silent-mode audio session
     ├── auth/                     # Firebase Auth, parental gate, nickname picker, stats & leaderboard
     ├── commons/                  # Shared UI components (GameScoreBadge, LoadingSpinner, WordImage)
-    ├── components/               # Learning game screens (Game1..Game5, Game8 Crossword)
+    ├── components/               # Flashcards (CardsMode), grammar modals, & Games 1–5 / Game 8
     ├── config.ts                 # API, reset & privacy policy URLs + __DEV__ flag
     ├── core/                     # Auto-synced TypeScript datasets & generators from web repo
     ├── data/
