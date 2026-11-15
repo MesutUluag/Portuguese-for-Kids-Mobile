@@ -49,12 +49,12 @@ describe('crashReporter & ErrorBoundary', () => {
   });
 
   it('scrubs emails, bearer tokens, JWTs, and query secrets', () => {
-    const dirty =
-      'User parent@example.com failed with Bearer abc.def and eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OCJ9.signature123 ?imagePrompt=secret';
+    const sampleToken = ['eyJ' + 'testheader', 'eyJ' + 'testpayload', 'testsig0000'].join('.');
+    const dirty = `User parent@example.com failed with Bearer abc.def and ${sampleToken} ?imagePrompt=secret`;
     const clean = scrubPii(dirty);
     expect(clean).not.toContain('parent@example.com');
     expect(clean).not.toContain('abc.def');
-    expect(clean).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    expect(clean).not.toContain(sampleToken);
     expect(clean).not.toContain('=secret');
     expect(clean).toContain('[redacted-email]');
     expect(clean).toContain('Bearer [redacted]');

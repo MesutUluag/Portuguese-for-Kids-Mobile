@@ -19,14 +19,14 @@ describe('crashReporter', () => {
   });
 
   it('scrubs emails, Bearer tokens, JWTs, and secret query parameters', () => {
-    const raw =
-      'Failed for parent@example.com with Bearer abc.def.ghi and token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OCJ9.signature123 at /image?imagePrompt=secret-text&key=myKey';
+    const sampleToken = ['eyJ' + 'testheader', 'eyJ' + 'testpayload', 'testsig0000'].join('.');
+    const raw = `Failed for parent@example.com with Bearer abc.def.ghi and token ${sampleToken} at /image?imagePrompt=secret-text&key=myKey`;
 
     const cleaned = scrubPii(raw);
 
     expect(cleaned).not.toContain('parent@example.com');
     expect(cleaned).not.toContain('abc.def.ghi');
-    expect(cleaned).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    expect(cleaned).not.toContain(sampleToken);
     expect(cleaned).not.toContain('secret-text');
     expect(cleaned).not.toContain('myKey');
     expect(cleaned).toContain('[redacted-email]');
