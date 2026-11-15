@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
 const FETCHED_NO_IMAGE = '__NO_IMAGE__';
@@ -146,6 +147,7 @@ const WIKI_ARTICLE: Record<string, string> = {
   bathroom: 'Bathroom',
   garden: 'Garden',
   school: 'Primary_school',
+  library: 'Library',
   'teacher (m)': 'Teacher',
   'teacher (f)': 'Teacher',
   'student (m)': 'Student',
@@ -301,15 +303,17 @@ export function useWikiImage(term: string): string | null {
       }
 
       const keyword = wikiArticleForTerm(term);
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'Api-User-Agent': WIKI_USER_AGENT,
+      };
+      if (Platform.OS !== 'web') {
+        headers['User-Agent'] = WIKI_USER_AGENT;
+      }
       try {
         const res = await fetch(
           `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`,
-          {
-            headers: {
-              Accept: 'application/json',
-              'Api-User-Agent': WIKI_USER_AGENT,
-            },
-          },
+          { headers },
         );
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -318,16 +322,19 @@ export function useWikiImage(term: string): string | null {
         if (cancelled) return;
 
         let imgUrl: string | null = null;
-        if (
-          typeof data === 'object' &&
-          data !== null &&
-          'thumbnail' in data &&
-          typeof (data as { thumbnail: unknown }).thumbnail === 'object' &&
-          (data as { thumbnail: unknown }).thumbnail !== null &&
-          'source' in ((data as { thumbnail: { source?: unknown } }).thumbnail) &&
-          typeof (data as { thumbnail: { source?: unknown } }).thumbnail.source === 'string'
-        ) {
-          imgUrl = (data as { thumbnail: { source: string } }).thumbnail.source;
+        if (typeof data === 'object' && data !== null) {
+          const rec = data as {
+            thumbnail?: { source?: unknown } | null;
+            originalimage?: { source?: unknown } | null;
+          };
+          const thumb =
+            typeof rec.thumbnail?.source === 'string' ? rec.thumbnail.source : null;
+          const orig =
+            typeof rec.originalimage?.source === 'string' &&
+            !/\.svg(?:$|\?)/i.test(rec.originalimage.source)
+              ? rec.originalimage.source
+              : null;
+          imgUrl = thumb ?? orig;
         }
 
         memoryCache[term] = imgUrl ?? FETCHED_NO_IMAGE;
@@ -337,7 +344,7 @@ export function useWikiImage(term: string): string | null {
         setResolved({ term, url: imgUrl });
       } catch {
         if (cancelled) return;
-        memoryCache[term] = FETCHED_NO_IMAGE;
+        // Do not poison memoryCache on transient network or HTTP failures so future retries can succeed
         setResolved({ term, url: null });
       }
     })();

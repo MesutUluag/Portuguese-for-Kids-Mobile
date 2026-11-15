@@ -1,11 +1,14 @@
 import {
   GAME3_PAIR_POINTS,
+  GAME6_FALLBACK_POINTS,
+  GAME6_PUZZLE_POINTS,
   GAME8_BOARD_BONUS,
   scoreGame1,
   scoreGame2,
   scoreGame3BoardBonus,
   scoreGame4,
   scoreGame5,
+  scoreGame7,
   scoreGame8Word,
 } from '@/utils/gameScoring';
 
@@ -40,6 +43,17 @@ describe('gameScoring (web parity)', () => {
     expect(scoreGame5(4, true)).toBe(10);
     expect(scoreGame5(5, false)).toBe(17);
     expect(scoreGame5(7, true)).toBe(14);
+  });
+
+  it('Game 6 awards 30 on solved puzzle and 5 on fallback acknowledgment', () => {
+    expect(GAME6_PUZZLE_POINTS).toBe(30);
+    expect(GAME6_FALLBACK_POINTS).toBe(5);
+  });
+
+  it('scoreGame7 awards 7 cleanly and 5 after wrong drops', () => {
+    expect(scoreGame7(0)).toBe(7);
+    expect(scoreGame7(1)).toBe(5);
+    expect(scoreGame7(3)).toBe(5);
   });
 
   it('scoreGame8Word deducts 2 once for audio and 2 per hint, and awards 0 when solved solely via hints', () => {

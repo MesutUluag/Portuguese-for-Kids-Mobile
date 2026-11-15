@@ -7,7 +7,7 @@ Companion repositories:
 - **Spring Boot backend:** `../Portugese-for-Kids-Backend`
 - **GitHub:** [MesutUluag/Portuguese-for-Kids-Mobile](https://github.com/MesutUluag/Portuguese-for-Kids-Mobile)
 
-> **Current Status — Phase 2A + Phase 3 (Flashcards, Grammar Modals, Games 1–5, Crossword & Audio):** Phase 0 spikes, Phase 1 auth/stats/leaderboard, Phase 2A interactive flashcards (`CardsMode` with 646 words, noun gender badges, and **Verb Conjugation**, **Preposition Contraction**, and **Adverb Usage** modals), Phase 3 interactive games (**Game 1 Picture Quiz**, **Game 2 Listen & Find**, **Game 3 Memory Match**, **Game 4 Fill Missing Letter**, **Game 5 Unscramble Word**, **Game 8 Crossword**), European Portuguese TTS (`pt-PT`), background music, and Wikimedia thumbnail caching (`WordImage`) are live. AI Story Mode, Jigsaw (`Game 6`), and Market (`Game 7`) follow in upcoming phases.
+> **Current Status — Phase 2A + Phase 3 + Phase 4 (Flashcards, Grammar Modals, All Games 1–8 & Audio):** Phase 0 spikes, Phase 1 auth/stats/leaderboard, Phase 2A interactive flashcards (`CardsMode` with 646 words, noun gender badges, and **Verb Conjugation**, **Preposition Contraction**, and **Adverb Usage** modals), Phase 3 interactive games (**Game 1 Picture Quiz**, **Game 2 Listen & Find**, **Game 3 Memory Match**, **Game 4 Fill Missing Letter**, **Game 5 Unscramble Word**, **Game 8 Crossword**), Phase 4 interactive games (**Game 6 3×3 Skia Jigsaw Puzzle** & **Game 7 O Mercado / Market Game**), European Portuguese TTS (`pt-PT`), background music, and Wikimedia thumbnail caching (`WordImage`) are live. AI Story Mode follows in Phase 2B.
 
 ---
 
@@ -141,19 +141,20 @@ Portugese-for-Kids-Mobile/
     │   └── speech.ts             # expo-speech European Portuguese TTS + silent-mode audio session
     ├── auth/                     # Firebase Auth, parental gate, nickname picker, stats & leaderboard
     ├── commons/                  # Shared UI components (GameScoreBadge, LoadingSpinner, WordImage)
-    ├── components/               # Flashcards (CardsMode), grammar modals, & Games 1–5 / Game 8
+    ├── components/               # Flashcards (CardsMode), grammar modals, & Games 1–8
     ├── config.ts                 # API, reset & privacy policy URLs + __DEV__ flag
     ├── core/                     # Auto-synced TypeScript datasets & generators from web repo
     ├── data/
     │   ├── marketItems.mobile.ts # Synced market items (alcohol-free mobile filter)
     │   └── __tests__/
     ├── spikes/
-    │   └── SkiaJigsawSpike.tsx   # Phase 0 60fps Skia + Reanimated jigsaw reference (for Phase 4)
+    │   └── SkiaJigsawSpike.tsx   # Phase 0 60fps Skia + Reanimated jigsaw spike reference
     ├── theme/tokens.ts           # Colour palette, radii, spacing & >=56pt touch targets
     ├── types/firebase-auth-rn.d.ts
     └── utils/
         ├── storage.ts            # Validated AsyncStorage key registry (incl. WIKI_IMAGE_CACHE) & wipe
-        ├── gameScoring.ts        # Pure scoring formulas for Games 1–5 & 8 (board bonus = 25)
+        ├── gameScoring.ts        # Pure scoring formulas for Games 1–8 (board bonus = 25, puzzle = 30)
+        ├── marketOrder.ts        # Portuguese numeral & market order phrase builders
         ├── useWikiImage.ts       # Curated Wikimedia thumbnail loader with AsyncStorage cache
         ├── jigsawGeometry.ts     # Pure jigsaw grid & tab geometry helpers
         ├── jigsawPath.ts         # Skia path builder for jigsaw piece clipping

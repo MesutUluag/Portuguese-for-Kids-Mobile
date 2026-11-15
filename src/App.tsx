@@ -41,6 +41,8 @@ import { Game2 } from '@/components/Game2';
 import { Game3 } from '@/components/Game3';
 import { Game4 } from '@/components/Game4';
 import { Game5 } from '@/components/Game5';
+import { Game6 } from '@/components/Game6';
+import { Game7 } from '@/components/Game7';
 import { Game8 } from '@/components/Game8';
 import { IS_DEV } from '@/config';
 import type { Mode } from '@/core/data/types';
@@ -138,6 +140,15 @@ function AppShell() {
   const [currentMode, setCurrentMode] = useState<Mode>('cards');
   const [recentGain, setRecentGain] = useState<number | null>(null);
   const [gainKey, setGainKey] = useState<number>(0);
+  const [scrollLockedMode, setScrollLockedMode] = useState<Mode | null>(null);
+
+  const scrollLocked = scrollLockedMode === currentMode;
+  const handleScrollLockChange = useCallback(
+    (locked: boolean) => {
+      setScrollLockedMode(locked ? currentMode : null);
+    },
+    [currentMode],
+  );
 
   const { musicEnabled, toggleMusic } = useBackgroundMusic();
   const {
@@ -449,6 +460,7 @@ function AppShell() {
         <CardsMode language={language} listHeader={headerContent} />
       ) : (
         <ScrollView
+          scrollEnabled={!scrollLocked}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
@@ -493,6 +505,24 @@ function AppShell() {
               recentGain={recentGain}
               gainKey={gainKey}
               onScore={(pts) => handleGameScore('game5', pts)}
+            />
+          ) : currentMode === 'game6' ? (
+            <Game6
+              language={language}
+              score={getScoreForMode('game6')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game6', pts)}
+              onInteractionLockChange={handleScrollLockChange}
+            />
+          ) : currentMode === 'game7' ? (
+            <Game7
+              language={language}
+              score={getScoreForMode('game7')}
+              recentGain={recentGain}
+              gainKey={gainKey}
+              onScore={(pts) => handleGameScore('game7', pts)}
+              onInteractionLockChange={handleScrollLockChange}
             />
           ) : currentMode === 'game8' ? (
             <Game8

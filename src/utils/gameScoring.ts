@@ -1,9 +1,11 @@
 /**
- * Pure scoring functions for Games 1–5 and Game 8, matching the exact
+ * Pure scoring functions for Games 1–8, matching the exact
  * logic of the original web components in Portugese-for-Kids/src/components/.
  */
 
 export const GAME3_PAIR_POINTS = 4;
+export const GAME6_PUZZLE_POINTS = 30;
+export const GAME6_FALLBACK_POINTS = 5;
 export const GAME8_BOARD_BONUS = 25;
 
 /**
@@ -47,6 +49,14 @@ export function scoreGame5(wordLength: number, hadReset: boolean): number {
   const base = wordLength <= 4 ? 10 : 14;
   const bonus = hadReset ? 0 : 3;
   return base + bonus;
+}
+
+/**
+ * Game 7 (Market / O Mercado):
+ * 7 pts if completed with 0 wrong drops, 5 pts if any wrong item was dropped first.
+ */
+export function scoreGame7(wrongDrops: number): number {
+  return wrongDrops === 0 ? 7 : 5;
 }
 
 /**
