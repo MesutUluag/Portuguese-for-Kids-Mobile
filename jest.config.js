@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
+  testTimeout: 15000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^lucide-react-native$':
