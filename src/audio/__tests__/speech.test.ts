@@ -48,6 +48,11 @@ describe('speech & shared audioSession', () => {
     await ensureAppAudioSession();
     await ensureAppAudioSession();
     expect(mockSetAudioModeAsync).toHaveBeenCalledTimes(1);
+    expect(mockSetAudioModeAsync).toHaveBeenCalledWith({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      shouldPlayInBackground: false,
+    });
   });
 
   it('calls Speech.stop only when canceling an active spoken utterance', async () => {

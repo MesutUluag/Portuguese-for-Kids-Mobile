@@ -83,7 +83,13 @@ describe('AuthModal', () => {
     expect(mockSignUpWithEmail).not.toHaveBeenCalled();
 
     await fireEvent.press(screen.getByLabelText('Privacy Policy'));
+    expect(screen.getByText('Privacy Policy — Portuguese for Kids')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Open web version'));
     expect(openUrlSpy).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
+
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(screen.getByText('Create Parent Account')).toBeTruthy();
     openUrlSpy.mockRestore();
   });
 });

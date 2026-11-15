@@ -1,0 +1,69 @@
+appId: com.mesutuluag.portugeseforkids
+---
+- launchApp:
+    clearState: true
+
+# Open Sign In via Parental Gate
+- tapOn:
+    id: "header-sign-in-btn"
+- assertVisible:
+    id: "parental-gate-challenge"
+- copyTextFrom:
+    id: "parental-gate-challenge"
+- runScript:
+    file: solveGate.js
+    env:
+      CHALLENGE: ${maestro.copiedText}
+- tapOn:
+    id: "parental-gate-input"
+- inputText: ${output.answer}
+- tapOn:
+    id: "parental-gate-verify"
+
+# Sign in with reviewer test credentials
+- assertVisible:
+    id: "auth-modal-email"
+- tapOn:
+    id: "auth-modal-email"
+- inputText: ${MAESTRO_REVIEWER_EMAIL}
+- tapOn:
+    id: "auth-modal-password"
+- inputText: ${MAESTRO_REVIEWER_PASSWORD}
+- tapOn:
+    id: "auth-modal-submit"
+
+# Dismiss optional nickname onboarding if prompted on fresh account
+- tapOn:
+    id: "nickname-confirm-btn"
+    optional: true
+
+# Confirm signed-in profile pill is visible
+- assertVisible:
+    id: "header-profile-btn"
+
+# Play Quiz Game 1
+- tapOn:
+    id: "nav-mode-game1"
+- assertVisible:
+    id: "nav-mode-story"
+
+# Open Story Mode and advance a page
+- tapOn:
+    id: "nav-mode-story"
+- assertVisible:
+    id: "story-mode-card"
+- assertVisible:
+    id: "story-next-btn"
+- tapOn:
+    id: "story-next-btn"
+- assertVisible: "Página 2"
+
+# Open Profile modal and Sign Out cleanly
+- tapOn:
+    id: "header-profile-btn"
+- assertVisible:
+    id: "stats-sign-out-btn"
+- tapOn:
+    id: "stats-sign-out-btn"
+- assertVisible:
+    id: "header-sign-in-btn"

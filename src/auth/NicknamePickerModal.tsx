@@ -84,6 +84,7 @@ function NicknamePickerBody({
             return (
               <Pressable
                 key={name}
+                testID={`nickname-chip-${name}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isSelected }}
                 accessibilityLabel={name}
@@ -109,6 +110,7 @@ function NicknamePickerBody({
 
         <View style={styles.actions}>
           <Pressable
+            testID="nickname-shuffle-btn"
             accessibilityRole="button"
             accessibilityLabel={isTr ? 'Yeni isimler üret' : 'Shuffle nickname choices'}
             disabled={saving}
@@ -126,6 +128,7 @@ function NicknamePickerBody({
           </Pressable>
 
           <Pressable
+            testID="nickname-confirm-btn"
             accessibilityRole="button"
             accessibilityLabel={
               isTr ? `Takma adı kaydet: ${selected}` : `Save nickname: ${selected}`
@@ -154,6 +157,7 @@ function NicknamePickerBody({
 
         {onCancel ? (
           <Pressable
+            testID="nickname-later-btn"
             accessibilityRole="button"
             accessibilityLabel={isTr ? 'Daha sonra' : 'Later'}
             disabled={saving}

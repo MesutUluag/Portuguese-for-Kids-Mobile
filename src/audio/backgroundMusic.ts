@@ -9,7 +9,7 @@ import {
 import { IS_DEV } from '@/config';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
-const BACKGROUND_MUSIC_VOLUME = 0.04;
+const BACKGROUND_MUSIC_VOLUME = 0.01;
 const SPEECH_RESUME_DELAY_MS = 300;
 const STATUS_UPDATE_INTERVAL_MS = 4000;
 
@@ -88,9 +88,9 @@ export function useBackgroundMusic() {
 
   // Create player + playback completion + AppState + speech-first listeners.
   useEffect(() => {
+    let mounted = true;
     let player: AudioPlayer | null = null;
     try {
-      void ensureAppAudioSession();
       speechPausedRef.current = isSpeechActive();
 
       const initialIdx = pickNextTrackIndex(-1);
@@ -101,14 +101,24 @@ export function useBackgroundMusic() {
       player.volume = BACKGROUND_MUSIC_VOLUME;
       playerRef.current = player;
 
-      if (
-        prefsLoadedRef.current &&
-        musicEnabledRef.current &&
-        !speechPausedRef.current &&
-        appActiveRef.current
-      ) {
-        player.play();
-      }
+      const createdPlayer = player;
+      void ensureAppAudioSession().then(() => {
+        if (!mounted || playerRef.current !== createdPlayer) return;
+        try {
+          if (
+            prefsLoadedRef.current &&
+            musicEnabledRef.current &&
+            !speechPausedRef.current &&
+            appActiveRef.current &&
+            !createdPlayer.playing
+          ) {
+            createdPlayer.volume = BACKGROUND_MUSIC_VOLUME;
+            createdPlayer.play();
+          }
+        } catch {
+          // Ignore native playback errors in unsupported/test environments
+        }
+      });
     } catch {
       return;
     }
@@ -166,14 +176,23 @@ export function useBackgroundMusic() {
       appActiveRef.current = nextState === 'active';
       try {
         if (nextState === 'active') {
-          if (
-            prefsLoadedRef.current &&
-            musicEnabledRef.current &&
-            !speechPausedRef.current &&
-            !activePlayer.playing
-          ) {
-            activePlayer.play();
-          }
+          void ensureAppAudioSession().then(() => {
+            if (!mounted || playerRef.current !== activePlayer) return;
+            try {
+              if (
+                prefsLoadedRef.current &&
+                musicEnabledRef.current &&
+                !speechPausedRef.current &&
+                appActiveRef.current &&
+                !activePlayer.playing
+              ) {
+                activePlayer.volume = BACKGROUND_MUSIC_VOLUME;
+                activePlayer.play();
+              }
+            } catch {
+              // Ignore player teardown races
+            }
+          });
         } else if (activePlayer.playing) {
           activePlayer.pause();
         }
@@ -183,6 +202,7 @@ export function useBackgroundMusic() {
     });
 
     return () => {
+      mounted = false;
       if (resumeTimerRef.current) {
         clearTimeout(resumeTimerRef.current);
         resumeTimerRef.current = null;
@@ -205,16 +225,34 @@ export function useBackgroundMusic() {
     if (!prefsLoaded) return;
     const player = playerRef.current;
     if (!player) return;
+    let active = true;
     try {
       if (!musicEnabled) {
         if (player.playing) player.pause();
       } else if (!speechPausedRef.current && appActiveRef.current && !player.playing) {
-        player.volume = BACKGROUND_MUSIC_VOLUME;
-        player.play();
+        void ensureAppAudioSession().then(() => {
+          if (!active || playerRef.current !== player) return;
+          try {
+            if (
+              musicEnabledRef.current &&
+              !speechPausedRef.current &&
+              appActiveRef.current &&
+              !player.playing
+            ) {
+              player.volume = BACKGROUND_MUSIC_VOLUME;
+              player.play();
+            }
+          } catch {
+            // Ignore native errors
+          }
+        });
       }
     } catch {
       // Ignore native errors
     }
+    return () => {
+      active = false;
+    };
   }, [musicEnabled, prefsLoaded]);
 
   const toggleMusic = useCallback(() => {

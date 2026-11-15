@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -166,7 +165,6 @@ export function Game3({
   const handleFlip = (idx: number, item: Word) => {
     if (blocked || flipped.includes(idx) || matched.includes(idx)) return;
 
-    void Haptics.selectionAsync().catch(() => {});
     const newFlipped = [...flipped, idx];
     setFlipped(newFlipped);
     speakText(item.pt, { language });
@@ -184,7 +182,6 @@ export function Game3({
         const newMatched = [...matched, a, b];
         setMatched(newMatched);
         setFlipped([]);
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         onScore?.(GAME3_PAIR_POINTS);
 
         if (newMatched.length === 6) {
@@ -197,7 +194,6 @@ export function Game3({
         }
       } else {
         setBlocked(true);
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         if (mismatchTimerRef.current) clearTimeout(mismatchTimerRef.current);
         mismatchTimerRef.current = setTimeout(() => {
           setFlipped([]);

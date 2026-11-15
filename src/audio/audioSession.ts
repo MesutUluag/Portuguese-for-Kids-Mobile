@@ -14,7 +14,7 @@ export async function ensureAppAudioSession(): Promise<void> {
   if (!audioSessionPromise) {
     audioSessionPromise = setAudioModeAsync({
       playsInSilentMode: true,
-      interruptionMode: 'duckOthers',
+      interruptionMode: 'mixWithOthers',
       shouldPlayInBackground: false,
     }).catch((err: unknown) => {
       audioSessionPromise = null;

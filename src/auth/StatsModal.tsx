@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useAuth } from '@/auth/AuthContext';
+import { PrivacyPolicyContent } from '@/auth/PrivacyPolicyModal';
 import { getLocalDateString } from '@/auth/telemetryHelpers';
 import { PRIVACY_POLICY_URL } from '@/config';
 import { colors, radii, shadows, spacing, touchTargets } from '@/theme/tokens';
@@ -94,7 +95,16 @@ function formatCompactDuration(seconds: number): string {
   return `${Math.max(1, Math.floor(seconds / 60))}m`;
 }
 
-function StatsModalBody({ language }: StatsModalProps) {
+function StatsModalBody({
+  language,
+  privacyOpen,
+  onOpenPrivacy,
+  onClosePrivacy,
+}: StatsModalProps & {
+  privacyOpen: boolean;
+  onOpenPrivacy: () => void;
+  onClosePrivacy: () => void;
+}) {
   const {
     profile,
     closeStatsModal,
@@ -184,12 +194,16 @@ function StatsModalBody({ language }: StatsModalProps) {
   };
 
   const handleOpenPrivacyPolicy = () => {
+    onOpenPrivacy();
+  };
+
+  const handleOpenExternalPrivacy = () => {
     requestParentApproval(
       () => {
         void Linking.openURL(PRIVACY_POLICY_URL);
       },
       isTr
-        ? 'Gizlilik politikasını açmak için ebeveyn doğrulaması gereklidir.'
+        ? 'Gizlilik politikasını tarayıcıda açmak için ebeveyn doğrulaması gereklidir.'
         : 'Ask a parent to open the Privacy Policy.',
     );
   };
@@ -248,6 +262,19 @@ function StatsModalBody({ language }: StatsModalProps) {
 
   const displayName =
     profile?.displayName || (isTr ? 'Minik Kaşif' : 'Kid Explorer');
+
+  if (privacyOpen) {
+    return (
+      <View style={styles.backdrop}>
+        <PrivacyPolicyContent
+          language={language}
+          backMode
+          onClose={onClosePrivacy}
+          onOpenExternal={handleOpenExternalPrivacy}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.backdrop}>
@@ -479,6 +506,7 @@ function StatsModalBody({ language }: StatsModalProps) {
                 </Pressable>
 
                 <Pressable
+                  testID="stats-confirm-delete-btn"
                   accessibilityRole="button"
                   accessibilityLabel={isTr ? 'Hesabı silmeyi onayla' : 'Confirm Delete'}
                   disabled={deleting}
@@ -499,6 +527,7 @@ function StatsModalBody({ language }: StatsModalProps) {
 
           <View style={styles.footerActions}>
             <Pressable
+              testID="stats-sign-out-btn"
               accessibilityRole="button"
               accessibilityLabel={isTr ? 'Çıkış Yap' : 'Sign Out'}
               onPress={handleSignOutPress}
@@ -511,6 +540,7 @@ function StatsModalBody({ language }: StatsModalProps) {
             </Pressable>
 
             <Pressable
+              testID="stats-delete-account-btn"
               accessibilityRole="button"
               accessibilityLabel={isTr ? 'Hesabı Sil' : 'Delete Account'}
               onPress={handleDeleteRequest}
@@ -523,7 +553,7 @@ function StatsModalBody({ language }: StatsModalProps) {
             </Pressable>
 
             <Pressable
-              accessibilityRole="link"
+              accessibilityRole="button"
               accessibilityLabel={isTr ? 'Gizlilik Politikası' : 'Privacy Policy'}
               onPress={handleOpenPrivacyPolicy}
               style={({ pressed }) => [styles.privacyBtn, pressed && styles.pressed]}
@@ -542,16 +572,40 @@ function StatsModalBody({ language }: StatsModalProps) {
 
 export function StatsModal({ language }: StatsModalProps) {
   const { isStatsModalOpen, closeStatsModal } = useAuth();
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [wasOpen, setWasOpen] = useState(isStatsModalOpen);
+
+  if (wasOpen !== isStatsModalOpen) {
+    setWasOpen(isStatsModalOpen);
+    if (!isStatsModalOpen && privacyOpen) {
+      setPrivacyOpen(false);
+    }
+  }
+
+  const handleRequestClose = () => {
+    if (privacyOpen) {
+      setPrivacyOpen(false);
+      return;
+    }
+    closeStatsModal();
+  };
 
   return (
     <Modal
       visible={isStatsModalOpen}
       transparent
       animationType="slide"
-      onRequestClose={closeStatsModal}
+      onRequestClose={handleRequestClose}
       statusBarTranslucent
     >
-      {isStatsModalOpen ? <StatsModalBody language={language} /> : null}
+      {isStatsModalOpen ? (
+        <StatsModalBody
+          language={language}
+          privacyOpen={privacyOpen}
+          onOpenPrivacy={() => setPrivacyOpen(true)}
+          onClosePrivacy={() => setPrivacyOpen(false)}
+        />
+      ) : null}
     </Modal>
   );
 }

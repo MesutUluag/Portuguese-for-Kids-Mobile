@@ -82,6 +82,10 @@ describe('StatsModal', () => {
     });
 
     await fireEvent.press(screen.getByLabelText('Privacy Policy'));
+    expect(screen.getByText('Privacy Policy — Portuguese for Kids')).toBeTruthy();
+    expect(openUrlSpy).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByLabelText('Open web version'));
     expect(mockRequestParentApproval).toHaveBeenCalled();
     expect(openUrlSpy).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
     openUrlSpy.mockRestore();

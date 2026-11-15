@@ -5,8 +5,8 @@ import {
   StyleSheet,
   Text,
   View,
+  type ImageSourcePropType,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { Volume2 } from 'lucide-react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -25,13 +25,11 @@ import Animated, {
 import Svg, {
   Circle,
   Defs,
-  Ellipse,
   G,
   Line,
   LinearGradient,
   Path,
   Pattern,
-  RadialGradient,
   Rect,
   Stop,
 } from 'react-native-svg';
@@ -162,6 +160,9 @@ function MarketItemVisual({
   );
 }
 
+const MARKET_BUNNY_SOURCE =
+  require('../../assets/bunny-mascot.png') as ImageSourcePropType;
+
 const BunnyMascot = React.memo(function BunnyMascot({
   state,
   language,
@@ -179,13 +180,16 @@ const BunnyMascot = React.memo(function BunnyMascot({
 
   const bounceY = useSharedValue(0);
   const shakeX = useSharedValue(0);
+  const sparkleScale = useSharedValue(1);
 
   useEffect(() => {
     cancelAnimation(bounceY);
     cancelAnimation(shakeX);
+    cancelAnimation(sparkleScale);
     if (reduceMotion) {
       bounceY.value = 0;
       shakeX.value = 0;
+      sparkleScale.value = 1;
       return;
     }
     if (isHappy) {
@@ -197,7 +201,16 @@ const BunnyMascot = React.memo(function BunnyMascot({
         3,
         false,
       );
+      sparkleScale.value = withRepeat(
+        withSequence(
+          withTiming(1.12, { duration: 240 }),
+          withTiming(0.92, { duration: 240 }),
+        ),
+        3,
+        true,
+      );
     } else if (isSad) {
+      sparkleScale.value = 1;
       shakeX.value = withSequence(
         withTiming(-4, { duration: 70 }),
         withTiming(4, { duration: 70 }),
@@ -206,6 +219,7 @@ const BunnyMascot = React.memo(function BunnyMascot({
         withTiming(0, { duration: 70 }),
       );
     } else if (isTalking) {
+      sparkleScale.value = 1;
       bounceY.value = withRepeat(
         withSequence(
           withTiming(-4, { duration: 160 }),
@@ -215,22 +229,19 @@ const BunnyMascot = React.memo(function BunnyMascot({
         false,
       );
     } else {
+      sparkleScale.value = 1;
       bounceY.value = withTiming(0, { duration: 150 });
       shakeX.value = 0;
     }
-  }, [bounceY, isHappy, isSad, isTalking, reduceMotion, shakeX]);
+  }, [bounceY, isHappy, isSad, isTalking, reduceMotion, shakeX, sparkleScale]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }, { translateY: bounceY.value }],
   }));
 
-  const mouthD = isHappy
-    ? 'M40 66 Q50 76 60 66'
-    : isSad
-      ? 'M42 70 Q50 63 58 70'
-      : isTalking
-        ? 'M42 65 Q50 74 58 65'
-        : 'M42 65 Q50 71 58 65';
+  const sparkleAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sparkleScale.value }],
+  }));
 
   return (
     <Pressable
@@ -242,95 +253,52 @@ const BunnyMascot = React.memo(function BunnyMascot({
       hitSlop={6}
       style={({ pressed }) => [styles.bunnyWrap, pressed && styles.pressedSoft]}
     >
-      {isHappy ? <Text style={styles.bunnyStars}>💖 ✨ 💖</Text> : null}
+      {isHappy ? (
+        <Animated.View
+          testID="market-bunny-happy-sparkles"
+          pointerEvents="none"
+          style={[styles.bunnySparklesWrap, sparkleAnimStyle]}
+        >
+          <Svg width={98} height={54} viewBox="0 0 98 54">
+            <Path
+              d="M14 11 L17 19 L25 22 L17 25 L14 33 L11 25 L3 22 L11 19 Z"
+              fill="#facc15"
+              stroke="#d97706"
+              strokeWidth={1.4}
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M49 2 L51.1 6.5 L56 7.2 L52.5 10.6 L53.3 15.5 L49 13.2 L44.7 15.5 L45.5 10.6 L42 7.2 L46.9 6.5 Z"
+              fill="#f59e0b"
+              stroke="#b45309"
+              strokeWidth={1.1}
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M84 7 L87.2 15.8 L96 19 L87.2 22.2 L84 31 L80.8 22.2 L72 19 L80.8 15.8 Z"
+              fill="#fde047"
+              stroke="#d97706"
+              strokeWidth={1.4}
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M90 34 L91.8 38.2 L96 40 L91.8 41.8 L90 46 L88.2 41.8 L84 40 L88.2 38.2 Z"
+              fill="#fbbf24"
+            />
+          </Svg>
+        </Animated.View>
+      ) : null}
       <Animated.View
         style={animStyle}
         renderToHardwareTextureAndroid
         shouldRasterizeIOS
       >
-        <Svg width={74} height={86} viewBox="0 0 100 116">
-          <Defs>
-            <RadialGradient id="bmFur" cx="48%" cy="38%" r="58%">
-              <Stop offset="0%" stopColor="#fde3c0" />
-              <Stop offset="45%" stopColor="#f97316" />
-              <Stop offset="100%" stopColor="#c2410c" />
-            </RadialGradient>
-            <RadialGradient id="bmEar" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="#fecaca" />
-              <Stop offset="100%" stopColor="#f87171" />
-            </RadialGradient>
-            <RadialGradient id="bmBelly" cx="50%" cy="40%" r="60%">
-              <Stop offset="0%" stopColor="#fff7ed" />
-              <Stop offset="100%" stopColor="#fed7aa" />
-            </RadialGradient>
-            <LinearGradient id="bmOverall" x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor="#60a5fa" />
-              <Stop offset="100%" stopColor="#2563eb" />
-            </LinearGradient>
-          </Defs>
-
-          {/* Left ear */}
-          <Ellipse cx={30} cy={26} rx={10} ry={24} fill="url(#bmFur)" />
-          <Ellipse cx={30} cy={26} rx={5.5} ry={17} fill="url(#bmEar)" />
-          {/* Right ear */}
-          <Ellipse cx={70} cy={26} rx={10} ry={24} fill="url(#bmFur)" />
-          <Ellipse cx={70} cy={26} rx={5.5} ry={17} fill="url(#bmEar)" />
-
-          {/* Overalls body */}
-          <Ellipse cx={50} cy={96} rx={26} ry={18} fill="url(#bmOverall)" />
-          <Rect x={38} y={76} width={24} height={22} rx={5} fill="url(#bmOverall)" />
-          <Rect x={44} y={83} width={12} height={8} rx={2.5} fill="none" stroke="#93c5fd" strokeWidth={1.2} />
-
-          {/* Arms */}
-          <Path d="M28 78 Q17 90 20 102" stroke="url(#bmFur)" strokeWidth={9} strokeLinecap="round" fill="none" />
-          <Circle cx={20} cy={103} r={6} fill="url(#bmFur)" />
-          <Path d="M72 78 Q83 90 80 102" stroke="url(#bmFur)" strokeWidth={9} strokeLinecap="round" fill="none" />
-          <Circle cx={80} cy={103} r={6} fill="url(#bmFur)" />
-
-          {/* Belly patch */}
-          <Ellipse cx={50} cy={90} rx={14} ry={9} fill="url(#bmBelly)" opacity={0.7} />
-
-          {/* Head */}
-          <Ellipse cx={50} cy={58} rx={28} ry={27} fill="url(#bmFur)" />
-          <Ellipse cx={50} cy={65} rx={14} ry={11} fill="url(#bmBelly)" />
-
-          {/* Blush */}
-          <Ellipse cx={28} cy={63} rx={7} ry={5} fill="#f43f5e" opacity={isHappy ? 0.45 : 0.22} />
-          <Ellipse cx={72} cy={63} rx={7} ry={5} fill="#f43f5e" opacity={isHappy ? 0.45 : 0.22} />
-
-          {/* Eyes */}
-          {isSad ? (
-            <G stroke="#1e1b4b" strokeWidth={2.8} fill="none" strokeLinecap="round">
-              <Path d="M36 54 Q40 50 44 54" />
-              <Path d="M56 54 Q60 50 64 54" />
-              <Path d="M37 59 Q35 64 37 67 Q39 64 37 59" fill="#7dd3fc" stroke="none" />
-            </G>
-          ) : (
-            <G>
-              <Circle cx={40} cy={54} r={5.5} fill="#ffffff" />
-              <Circle cx={40} cy={54} r={3.6} fill="#312e81" />
-              <Circle cx={40} cy={54} r={2.1} fill="#0f0a2a" />
-              <Circle cx={41.8} cy={52.2} r={1.1} fill="#ffffff" />
-
-              <Circle cx={60} cy={54} r={5.5} fill="#ffffff" />
-              <Circle cx={60} cy={54} r={3.6} fill="#312e81" />
-              <Circle cx={60} cy={54} r={2.1} fill="#0f0a2a" />
-              <Circle cx={61.8} cy={52.2} r={1.1} fill="#ffffff" />
-            </G>
-          )}
-
-          {/* Nose & Mouth */}
-          <Ellipse cx={50} cy={62} rx={4.5} ry={3.2} fill="#e11d48" />
-          <Line x1={50} y1={65} x2={50} y2={68} stroke="#9f1239" strokeWidth={1.2} strokeLinecap="round" />
-          <Path
-            d={mouthD}
-            fill={isHappy ? '#fb7185' : 'none'}
-            stroke="#7f1d1d"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-          />
-          {isHappy ? <Rect x={45} y={67} width={10} height={5} rx={1.5} fill="#ffffff" /> : null}
-        </Svg>
+        <Image
+          testID="market-bunny-mascot-image"
+          source={MARKET_BUNNY_SOURCE}
+          style={styles.bunnyImage}
+          resizeMode="contain"
+        />
       </Animated.View>
     </Pressable>
   );
@@ -491,6 +459,7 @@ const RealisticCart = React.memo(function RealisticCart({
 
   return (
     <Animated.View
+      testID={uid === 'exit' ? 'market-cart-exit' : 'market-cart-active'}
       style={[styles.cartWrapper, wrapperAnim]}
       renderToHardwareTextureAndroid
       shouldRasterizeIOS
@@ -1016,7 +985,6 @@ export function Game7({
   );
 
   const handleMascotPress = useCallback(() => {
-    void Haptics.selectionAsync().catch(() => {});
     setMascotState('talking');
     announceOrder(0);
     scheduleTimer(() => setMascotState('idle'), 2000);
@@ -1026,7 +994,7 @@ export function Game7({
     (dropped: MobileMarketItem, speakCount = false) => {
       const currentOrder = orderRef.current;
       if (isSuccessRef.current) return;
-      if (cartStateRef.current === 'enter') return;
+      if (cartStateRef.current === 'enter' || cartStateRef.current === 'exit') return;
       if (cartCountRef.current >= currentOrder.count) return;
 
       if (dropped.id === currentOrder.item.id) {
@@ -1039,7 +1007,6 @@ export function Game7({
           speakCountPhrase(pendingCountRef.current, dropped);
         }
 
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         const entryId = `${Date.now()}-${Math.random()}`;
         const nextCart = [...cartItemsRef.current, { id: entryId, item: dropped }];
         cartItemsRef.current = nextCart;
@@ -1057,7 +1024,6 @@ export function Game7({
         if (newCount >= currentOrder.count) {
           isSuccessRef.current = true;
           setIsSuccess(true);
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
           const pts = scoreGame7(wrongDropsRef.current);
           onScoreRef.current?.(pts);
@@ -1072,16 +1038,25 @@ export function Game7({
                 setShowConfetti(true);
                 scheduleTimer(() => setShowConfetti(false), 1250);
               }
+              cartStateRef.current = 'exit';
+              setCartState('exit');
               setExitingCart(nextCart);
-              scheduleTimer(() => setExitingCart(null), 850);
-              setCartKey((k) => k + 1);
-              cartStateRef.current = 'enter';
-              setCartState('enter');
-              startNewRound(true, true, true);
+
+              const exitDurationMs = reduceMotion ? 80 : 800;
+              const enterDurationMs = reduceMotion ? 40 : 800;
               scheduleTimer(() => {
-                cartStateRef.current = 'idle';
-                setCartState('idle');
-              }, 800);
+                setExitingCart(null);
+                setCartKey((k) => k + 1);
+                cartStateRef.current = 'enter';
+                setCartState('enter');
+                startNewRound(true, true, true);
+                scheduleTimer(() => {
+                  if (cartStateRef.current === 'enter') {
+                    cartStateRef.current = 'idle';
+                    setCartState('idle');
+                  }
+                }, enterDurationMs);
+              }, exitDurationMs);
             } else {
               setMascotState('talking');
               scheduleTimer(() => setMascotState('idle'), 600);
@@ -1089,11 +1064,10 @@ export function Game7({
             }
           }, 650);
 
-          announceOrder(itemsAfterDrop >= CART_CAPACITY ? 2100 : 1150);
+          announceOrder(itemsAfterDrop >= CART_CAPACITY ? 2250 : 1150);
         }
       } else {
         wrongDropsRef.current += 1;
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         setMascotState('sad');
         countSpeechActiveRef.current = false;
         speakText(`Não! Isso é ${dropped.ptName}.`, { language: langRef.current });
@@ -1118,7 +1092,13 @@ export function Game7({
         wasDraggingRef.current = false;
         return;
       }
-      if (isSuccessRef.current || cartStateRef.current === 'enter') return;
+      if (
+        isSuccessRef.current ||
+        cartStateRef.current === 'enter' ||
+        cartStateRef.current === 'exit'
+      ) {
+        return;
+      }
       const currentOrder = orderRef.current;
       const isCorrectItem = item.id === currentOrder.item.id;
       if (
@@ -1180,7 +1160,13 @@ export function Game7({
 
   const handleDragBegin = useCallback(
     (item: MobileMarketItem, absX: number, absY: number) => {
-      if (isSuccessRef.current || cartStateRef.current === 'enter') return;
+      if (
+        isSuccessRef.current ||
+        cartStateRef.current === 'enter' ||
+        cartStateRef.current === 'exit'
+      ) {
+        return;
+      }
       wasDraggingRef.current = true;
       dragHandledEndRef.current = false;
       lockChangeRef.current?.(true);
@@ -1308,15 +1294,15 @@ export function Game7({
               reduceMotion={reduceMotion}
             />
           </View>
-        ) : null}
-
-        <RealisticCart
-          key={cartKey}
-          uid="active"
-          cartItems={cartItems}
-          cartState={flyingItems.length > 0 && cartState === 'idle' ? 'dragOver' : cartState}
-          reduceMotion={reduceMotion}
-        />
+        ) : (
+          <RealisticCart
+            key={cartKey}
+            uid="active"
+            cartItems={cartItems}
+            cartState={flyingItems.length > 0 && cartState === 'idle' ? 'dragOver' : cartState}
+            reduceMotion={reduceMotion}
+          />
+        )}
       </View>
 
       {/* Unclipped confetti burst rendered above cartZone */}
@@ -1389,10 +1375,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     flexShrink: 0,
   },
-  bunnyStars: {
+  bunnyImage: {
+    width: 82,
+    height: 82,
+  },
+  bunnySparklesWrap: {
     position: 'absolute',
     top: -12,
-    fontSize: 13,
+    left: -8,
+    width: 98,
+    height: 54,
     zIndex: 20,
   },
   speechCard: {

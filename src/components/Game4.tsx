@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -134,7 +133,6 @@ export function Game4({
     if (c === round.correctChar) {
       setShowSuccess(true);
       setLastWrongChar(null);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const points = scoreGame4(hasWrongAttemptRef.current);
       onScore?.(points);
 
@@ -154,7 +152,6 @@ export function Game4({
       hasWrongAttemptRef.current = true;
       setLastWrongChar(c);
       setShakeKey((k) => k + 1);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       speakText(round.target.pt, { language });
 
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);

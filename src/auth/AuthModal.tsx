@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useAuth } from '@/auth/AuthContext';
+import { PrivacyPolicyContent } from '@/auth/PrivacyPolicyModal';
 import { PRIVACY_POLICY_URL } from '@/config';
 import { colors, radii, shadows, spacing, touchTargets } from '@/theme/tokens';
 
@@ -73,7 +74,16 @@ function mapFirebaseAuthError(err: unknown, language: 'en' | 'tr'): string {
     : 'An error occurred. Please try again.';
 }
 
-function AuthModalBody({ language }: AuthModalProps) {
+function AuthModalBody({
+  language,
+  privacyOpen,
+  onOpenPrivacy,
+  onClosePrivacy,
+}: AuthModalProps & {
+  privacyOpen: boolean;
+  onOpenPrivacy: () => void;
+  onClosePrivacy: () => void;
+}) {
   const {
     closeAuthModal,
     isFirebaseConfigured,
@@ -93,6 +103,21 @@ function AuthModalBody({ language }: AuthModalProps) {
   const [success, setSuccess] = useState<string | null>(null);
 
   const isTr = language === 'tr';
+
+  if (privacyOpen) {
+    return (
+      <View style={styles.privacyBackdrop}>
+        <PrivacyPolicyContent
+          language={language}
+          backMode
+          onClose={onClosePrivacy}
+          onOpenExternal={() => {
+            void Linking.openURL(PRIVACY_POLICY_URL);
+          }}
+        />
+      </View>
+    );
+  }
 
   const switchTab = (nextTab: AuthTab) => {
     setTab(nextTab);
@@ -185,6 +210,7 @@ function AuthModalBody({ language }: AuthModalProps) {
       >
         <View style={styles.card} accessibilityViewIsModal>
           <Pressable
+            testID="auth-modal-close"
             accessibilityRole="button"
             accessibilityLabel={isTr ? 'Giriş penceresini kapat' : 'Close sign in dialog'}
             hitSlop={10}
@@ -228,6 +254,7 @@ function AuthModalBody({ language }: AuthModalProps) {
 
           <View style={styles.tabsRow}>
             <Pressable
+              testID="auth-tab-signin"
               accessibilityRole="tab"
               accessibilityState={{ selected: tab === 'signin' }}
               accessibilityLabel={isTr ? 'Giriş Yap' : 'Sign In'}
@@ -246,6 +273,7 @@ function AuthModalBody({ language }: AuthModalProps) {
             </Pressable>
 
             <Pressable
+              testID="auth-tab-signup"
               accessibilityRole="tab"
               accessibilityState={{ selected: tab === 'signup' }}
               accessibilityLabel={isTr ? 'Kayıt Ol' : 'Sign Up'}
@@ -264,6 +292,7 @@ function AuthModalBody({ language }: AuthModalProps) {
             </Pressable>
 
             <Pressable
+              testID="auth-tab-forgot"
               accessibilityRole="tab"
               accessibilityState={{ selected: tab === 'forgot' }}
               accessibilityLabel={isTr ? 'Şifremi Unuttum' : 'Forgot Password'}
@@ -331,6 +360,7 @@ function AuthModalBody({ language }: AuthModalProps) {
             <View style={styles.inputRow}>
               <Mail size={18} color={colors.textMuted} />
               <TextInput
+                testID="auth-modal-email"
                 accessibilityLabel={isTr ? 'Ebeveyn e-postası' : "Parent's email"}
                 autoCapitalize="none"
                 autoComplete="email"
@@ -348,6 +378,7 @@ function AuthModalBody({ language }: AuthModalProps) {
               <View style={styles.inputRow}>
                 <Lock size={18} color={colors.textMuted} />
                 <TextInput
+                  testID="auth-modal-password"
                   accessibilityLabel={isTr ? 'Şifre' : 'Password'}
                   autoComplete={tab === 'signup' ? 'new-password' : 'current-password'}
                   onChangeText={setPassword}
@@ -377,6 +408,7 @@ function AuthModalBody({ language }: AuthModalProps) {
           ) : null}
 
           <Pressable
+            testID="auth-modal-submit"
             accessibilityRole="button"
             accessibilityLabel={
               tab === 'signin'
@@ -419,11 +451,9 @@ function AuthModalBody({ language }: AuthModalProps) {
           </Pressable>
 
           <Pressable
-            accessibilityRole="link"
+            accessibilityRole="button"
             accessibilityLabel={isTr ? 'Gizlilik Politikası' : 'Privacy Policy'}
-            onPress={() => {
-              void Linking.openURL(PRIVACY_POLICY_URL);
-            }}
+            onPress={onOpenPrivacy}
             style={({ pressed }) => [styles.privacyBtn, pressed && styles.pressed]}
           >
             <Text style={styles.privacyText}>
@@ -438,16 +468,40 @@ function AuthModalBody({ language }: AuthModalProps) {
 
 export function AuthModal({ language }: AuthModalProps) {
   const { isAuthModalOpen, closeAuthModal } = useAuth();
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [wasOpen, setWasOpen] = useState(isAuthModalOpen);
+
+  if (wasOpen !== isAuthModalOpen) {
+    setWasOpen(isAuthModalOpen);
+    if (!isAuthModalOpen && privacyOpen) {
+      setPrivacyOpen(false);
+    }
+  }
+
+  const handleRequestClose = () => {
+    if (privacyOpen) {
+      setPrivacyOpen(false);
+      return;
+    }
+    closeAuthModal();
+  };
 
   return (
     <Modal
       visible={isAuthModalOpen}
       transparent
       animationType="slide"
-      onRequestClose={closeAuthModal}
+      onRequestClose={handleRequestClose}
       statusBarTranslucent
     >
-      {isAuthModalOpen ? <AuthModalBody language={language} /> : null}
+      {isAuthModalOpen ? (
+        <AuthModalBody
+          language={language}
+          privacyOpen={privacyOpen}
+          onOpenPrivacy={() => setPrivacyOpen(true)}
+          onClosePrivacy={() => setPrivacyOpen(false)}
+        />
+      ) : null}
     </Modal>
   );
 }
@@ -456,6 +510,12 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.58)',
+  },
+  privacyBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.58)',
+    justifyContent: 'center',
+    padding: spacing.md,
   },
   scrollContent: {
     flexGrow: 1,

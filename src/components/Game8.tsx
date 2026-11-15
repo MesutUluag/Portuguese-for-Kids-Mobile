@@ -8,7 +8,6 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { Check, ChevronDown, Delete, Dices, Volume2, X } from 'lucide-react-native';
 import { cancelSpeech, speakText } from '@/audio/speech';
 import { GameScoreBadge } from '@/commons/GameScoreBadge';
@@ -211,7 +210,6 @@ export function Game8({
         const emptyCell = w.cells.find(([r, c]) => !userInputs[makeCellKey(r, c)]);
         setSelectedCell(emptyCell ?? w.cells[0] ?? null);
       }
-      void Haptics.selectionAsync().catch(() => {});
     },
     [puzzle.words, userInputs],
   );
@@ -227,7 +225,6 @@ export function Game8({
       }
     } else if (wordIds.includes(activeWordId)) {
       setSelectedCell([r, c]);
-      void Haptics.selectionAsync().catch(() => {});
     } else if (wordIds[0]) {
       selectWord(wordIds[0], [r, c]);
     }
@@ -282,7 +279,6 @@ export function Game8({
       if (firstWord) {
         speakText(firstWord.word.pt, { language });
       }
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
       if (
         puzzle.wordList.length > 0 &&
@@ -305,8 +301,6 @@ export function Game8({
       const [r, c] = selectedCell;
       const cell = puzzle.grid[r]?.[c];
       if (!cell || cell.type !== 'letter') return;
-
-      void Haptics.selectionAsync().catch(() => {});
 
       let charToSet = charInput.toUpperCase();
       const sol = cell.solution;
@@ -341,8 +335,6 @@ export function Game8({
     if (!selectedCell || !activeWord) return;
     const [r, c] = selectedCell;
     const key = makeCellKey(r, c);
-
-    void Haptics.selectionAsync().catch(() => {});
 
     if (userInputs[key]) {
       manualCellWordsRef.current.delete(key);
@@ -402,8 +394,6 @@ export function Game8({
     const cell = puzzle.grid[r]?.[c];
     if (!cell || cell.type !== 'letter') return;
 
-    void Haptics.selectionAsync().catch(() => {});
-
     const nextHints = (hintsUsedWordsRef.current.get(activeWord.id) ?? 0) + 1;
     hintsUsedWordsRef.current.set(activeWord.id, nextHints);
     setHintsUsedWords((prev) => ({
@@ -448,7 +438,6 @@ export function Game8({
     });
 
     setCellStatus(newStatus);
-    void Haptics.selectionAsync().catch(() => {});
   };
 
   const handleRevealAll = () => {
@@ -470,7 +459,6 @@ export function Game8({
     setUserInputs(filled);
     setCellStatus(status);
     setCompletedWords(puzzle.wordList.map((w) => w.id));
-    void Haptics.selectionAsync().catch(() => {});
   };
 
   const activeWordProgress = useMemo(() => {
@@ -518,7 +506,6 @@ export function Game8({
 
           <Pressable
             onPress={() => {
-              void Haptics.selectionAsync().catch(() => {});
               setCategoryMenuOpen(true);
             }}
             accessibilityRole="button"
@@ -536,7 +523,6 @@ export function Game8({
         <View style={styles.headerBadges}>
           <Pressable
             onPress={() => {
-              void Haptics.selectionAsync().catch(() => {});
               initPuzzleForCategory(selectedCategory);
             }}
             accessibilityRole="button"
@@ -604,7 +590,6 @@ export function Game8({
                   <Pressable
                     key={cat}
                     onPress={() => {
-                      void Haptics.selectionAsync().catch(() => {});
                       initPuzzleForCategory(cat);
                     }}
                     accessibilityRole="button"
@@ -672,7 +657,6 @@ export function Game8({
                   audioUsedWordsRef.current.add(activeWord.id);
                   setAudioUsedWords((prev) => ({ ...prev, [activeWord.id]: true }));
                 }
-                void Haptics.selectionAsync().catch(() => {});
                 speakText(activeWord.word.pt, { language });
               }}
               accessibilityRole="button"

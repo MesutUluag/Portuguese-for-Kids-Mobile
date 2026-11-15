@@ -20,7 +20,6 @@ import {
   Skia,
   type SkImage,
 } from '@shopify/react-native-skia';
-import * as Haptics from 'expo-haptics';
 import { Volume2 } from 'lucide-react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
@@ -1052,11 +1051,8 @@ export function Game6({
     [onInteractionLockChange],
   );
 
-  const handleDropResult = useCallback((snapped: boolean, totalSolved: number) => {
+  const handleDropResult = useCallback((_snapped: boolean, totalSolved: number) => {
     setSolvedCount(totalSolved);
-    if (snapped) {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    }
     if (totalSolved >= TOTAL_PIECES) {
       setRoundSolved(true);
     }
@@ -1065,7 +1061,6 @@ export function Game6({
   useEffect(() => {
     if (!roundSolved || solvedRef.current) return;
     solvedRef.current = true;
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onScoreRef.current?.(GAME6_PUZZLE_POINTS);
     cancelAdvanceRef.current?.();
     cancelAdvanceRef.current = speakAndSchedule(roundState.target.pt, {
@@ -1081,7 +1076,6 @@ export function Game6({
   }, [loadNextRound, roundSolved, roundState.target.pt]);
 
   const handleFallbackComplete = () => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onScoreRef.current?.(GAME6_FALLBACK_POINTS);
     loadNextRound();
   };

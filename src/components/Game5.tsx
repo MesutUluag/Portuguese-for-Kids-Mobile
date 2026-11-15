@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -136,13 +135,11 @@ export function Game5({
     const prevIdx = historyIdx - 1;
     const prevWord = history[prevIdx];
     if (!prevWord) return;
-    void Haptics.selectionAsync().catch(() => {});
     setHistoryIdx(prevIdx);
     applyLoadedWord(prevWord);
   };
 
   const handleNext = () => {
-    void Haptics.selectionAsync().catch(() => {});
     const nextIdx = historyIdx + 1;
     if (nextIdx < history.length) {
       const existing = history[nextIdx];
@@ -155,7 +152,6 @@ export function Game5({
   };
 
   const handleReset = useCallback(() => {
-    void Haptics.selectionAsync().catch(() => {});
     hadResetRef.current = true;
     setInput([]);
     setHidden(Array(scrambled.length).fill(false));
@@ -165,7 +161,6 @@ export function Game5({
   const handleLetter = (idx: number, char: string) => {
     if (hidden[idx] || feedback === 'correct') return;
 
-    void Haptics.selectionAsync().catch(() => {});
     const newInput = [...input, char];
     const newHidden = [...hidden];
     newHidden[idx] = true;
@@ -175,7 +170,6 @@ export function Game5({
     if (newInput.length === target.pt.length) {
       if (newInput.join('') === target.pt) {
         setFeedback('correct');
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         const points = scoreGame5(target.pt.length, hadResetRef.current);
         onScore?.(points);
 
@@ -191,7 +185,6 @@ export function Game5({
         hadResetRef.current = true;
         setFeedback('wrong');
         setShakeKey((k) => k + 1);
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         speakText(target.pt, { language });
 
         if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);

@@ -357,6 +357,7 @@ describe('Phase 4 Games (Game6 Jigsaw & Game7 Market)', () => {
       await act(async () => {
         jest.advanceTimersByTime(300);
       });
+      expect(screen.getByTestId('market-bunny-mascot-image')).toBeTruthy();
 
       let totalAdded = 0;
       let guard = 0;
@@ -397,10 +398,15 @@ describe('Phase 4 Games (Game6 Jigsaw & Game7 Market)', () => {
           await act(async () => {
             jest.advanceTimersByTime(700);
           });
-          expect(screen.getByText('💖 ✨ 💖')).toBeTruthy();
+          expect(screen.getByTestId('market-bunny-happy-sparkles')).toBeTruthy();
+          expect(screen.queryByText('💖 ✨ 💖')).toBeNull();
+          expect(screen.getByTestId('market-cart-exit')).toBeTruthy();
+          expect(screen.queryByTestId('market-cart-active')).toBeNull();
           await act(async () => {
             jest.advanceTimersByTime(3500);
           });
+          expect(screen.queryByTestId('market-cart-exit')).toBeNull();
+          expect(screen.getByTestId('market-cart-active')).toBeTruthy();
         }
       }
 

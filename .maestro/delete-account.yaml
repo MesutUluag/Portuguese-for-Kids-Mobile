@@ -1,0 +1,67 @@
+appId: com.mesutuluag.portugeseforkids
+---
+- launchApp:
+    clearState: true
+
+# Pass Parental Gate to open AuthModal
+- tapOn:
+    id: "header-sign-in-btn"
+- copyTextFrom:
+    id: "parental-gate-challenge"
+- runScript:
+    file: solveGate.js
+    env:
+      CHALLENGE: ${maestro.copiedText}
+- tapOn:
+    id: "parental-gate-input"
+- inputText: ${output.answer}
+- tapOn:
+    id: "parental-gate-verify"
+
+# Create temporary test parent account
+- tapOn:
+    id: "auth-tab-signup"
+- tapOn:
+    id: "auth-modal-email"
+- inputText: ${MAESTRO_TEMP_EMAIL}
+- tapOn:
+    id: "auth-modal-password"
+- inputText: ${MAESTRO_TEMP_PASSWORD}
+- tapOn:
+    id: "auth-modal-submit"
+
+# Accept default kid-safe nickname if modal opens
+- tapOn:
+    id: "nickname-confirm-btn"
+    optional: true
+
+# Open Profile & request account deletion
+- assertVisible:
+    id: "header-profile-btn"
+- tapOn:
+    id: "header-profile-btn"
+- assertVisible:
+    id: "stats-delete-account-btn"
+- tapOn:
+    id: "stats-delete-account-btn"
+
+# Solve second Parental Gate confirmation
+- copyTextFrom:
+    id: "parental-gate-challenge"
+- runScript:
+    file: solveGate.js
+    env:
+      CHALLENGE: ${maestro.copiedText}
+- tapOn:
+    id: "parental-gate-input"
+- inputText: ${output.answer}
+- tapOn:
+    id: "parental-gate-verify"
+
+# Confirm permanent deletion & verify return to guest mode
+- assertVisible:
+    id: "stats-confirm-delete-btn"
+- tapOn:
+    id: "stats-confirm-delete-btn"
+- assertVisible:
+    id: "header-sign-in-btn"

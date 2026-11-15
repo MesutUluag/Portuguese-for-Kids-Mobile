@@ -12,7 +12,6 @@ import {
   useWindowDimensions,
   type ListRenderItemInfo,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import {
   BookOpen,
   Check,
@@ -332,6 +331,7 @@ const CardsListHeader = React.memo(function CardsListHeader({
         <View style={[styles.searchBoxWrap, focused && styles.searchBoxFocused]}>
           <Search size={16} strokeWidth={2.2} color={colors.textMuted} />
           <TextInput
+            testID="cards-search-input"
             value={query}
             onChangeText={onChangeQuery}
             onFocus={() => setFocused(true)}
@@ -347,6 +347,7 @@ const CardsListHeader = React.memo(function CardsListHeader({
           />
           {query.length > 0 ? (
             <Pressable
+              testID="cards-search-clear"
               onPress={() => onChangeQuery('')}
               accessibilityRole="button"
               accessibilityLabel={isTr ? 'Aramayı temizle' : 'Clear search'}
@@ -359,6 +360,7 @@ const CardsListHeader = React.memo(function CardsListHeader({
         </View>
 
         <Pressable
+          testID="cards-category-btn"
           onPress={onOpenCategoryMenu}
           accessibilityRole="button"
           accessibilityLabel={isTr ? 'Kategori seç' : 'Select category'}
@@ -427,14 +429,12 @@ export function CardsMode({
 
   const handleSpeak = useCallback(
     (word: Word) => {
-      void Haptics.selectionAsync().catch(() => {});
       speakText(word.pt, { language });
     },
     [language],
   );
 
   const handleOpenCategoryMenu = useCallback(() => {
-    void Haptics.selectionAsync().catch(() => {});
     setCategoryMenuOpen(true);
   }, []);
 
@@ -553,7 +553,6 @@ export function CardsMode({
             <ScrollView showsVerticalScrollIndicator contentContainerStyle={styles.modalList}>
               <Pressable
                 onPress={() => {
-                  void Haptics.selectionAsync().catch(() => {});
                   setActiveCategory(null);
                   setCategoryMenuOpen(false);
                 }}
@@ -585,7 +584,6 @@ export function CardsMode({
                   <Pressable
                     key={cat}
                     onPress={() => {
-                      void Haptics.selectionAsync().catch(() => {});
                       setActiveCategory(cat);
                       setCategoryMenuOpen(false);
                     }}

@@ -108,11 +108,14 @@ describe('useBackgroundMusic', () => {
     const view = await render(<Harness />);
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(createAudioPlayer).toHaveBeenCalledWith(expect.anything(), {
       updateInterval: 4000,
     });
+    expect(mockPlayer.volume).toBe(0.01);
     expect(mockPlayer.play).toHaveBeenCalledTimes(1);
 
     await act(async () => {

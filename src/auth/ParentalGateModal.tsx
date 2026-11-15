@@ -96,6 +96,7 @@ function ParentalGateBody({
     <View style={styles.backdrop}>
       <View style={styles.card} accessibilityViewIsModal>
         <Pressable
+          testID="parental-gate-close"
           accessibilityRole="button"
           accessibilityLabel={isTr ? 'Ebeveyn kilidini kapat' : 'Close parental gate'}
           hitSlop={10}
@@ -123,6 +124,7 @@ function ParentalGateBody({
 
         <View style={styles.challengeBox}>
           <Text
+            testID="parental-gate-challenge"
             style={styles.challengeText}
             accessibilityLabel={`${challenge.left} times ${challenge.right}`}
           >
@@ -131,6 +133,7 @@ function ParentalGateBody({
         </View>
 
         <TextInput
+          testID="parental-gate-input"
           accessibilityLabel={isTr ? 'Matematik cevabı' : 'Parental gate answer'}
           editable={!isLocked}
           keyboardType="number-pad"
@@ -160,6 +163,7 @@ function ParentalGateBody({
 
         <View style={styles.actions}>
           <Pressable
+            testID="parental-gate-cancel"
             accessibilityRole="button"
             accessibilityLabel={isTr ? 'İptal' : 'Cancel'}
             onPress={onCancel}
@@ -173,6 +177,7 @@ function ParentalGateBody({
           </Pressable>
 
           <Pressable
+            testID="parental-gate-verify"
             accessibilityRole="button"
             accessibilityLabel={isTr ? 'Doğrula ve devam et' : 'Verify and continue'}
             disabled={isLocked}

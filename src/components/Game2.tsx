@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -119,7 +118,6 @@ export function Game2({
       lockedRef.current = true;
       setCorrectPt(round.target.pt);
       setLastWrongPt(null);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const points = scoreGame2(attemptsRef.current);
       onScore?.(points);
 
@@ -138,7 +136,6 @@ export function Game2({
       attemptsRef.current += 1;
       setLastWrongPt(opt.pt);
       setShakeKey((k) => k + 1);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       speakText(round.target.pt, { language });
 
       if (wrongFlashTimerRef.current) clearTimeout(wrongFlashTimerRef.current);
@@ -168,7 +165,6 @@ export function Game2({
         <Pressable
           style={({ pressed }) => [styles.speakerBtn, pressed && styles.pressed]}
           onPress={() => {
-            void Haptics.selectionAsync().catch(() => {});
             speakText(round.target.pt, { language });
           }}
           accessibilityRole="button"

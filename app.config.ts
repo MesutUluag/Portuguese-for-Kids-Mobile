@@ -1,5 +1,47 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
-import { withAndroidManifest, type ConfigPlugin } from 'expo/config-plugins';
+import {
+  withAndroidManifest,
+  withGradleProperties,
+  type ConfigPlugin,
+} from 'expo/config-plugins';
+
+function upsertGradleProp(
+  props: { type: string; key?: string; value?: string }[],
+  key: string,
+  value: string,
+): void {
+  const idx = props.findIndex(
+    (item) => item.type === 'property' && item.key === key,
+  );
+  if (idx >= 0) {
+    props[idx] = { type: 'property', key, value };
+  } else {
+    props.push({ type: 'property', key, value });
+  }
+}
+
+/**
+ * Prevents Android native C++ OOM kills (`clang++ Killed` while compiling
+ * `@shopify/react-native-skia`) on cloud CI runners by capping Gradle/CMake
+ * parallelism, and restricts internal preview/dev APKs to `arm64-v8a`.
+ */
+const withAndroidMemorySafeBuild: ConfigPlugin<{ singleArm64: boolean }> = (
+  config,
+  { singleArm64 },
+) =>
+  withGradleProperties(config, (mod) => {
+    upsertGradleProp(
+      mod.modResults,
+      'org.gradle.jvmargs',
+      '-Xmx2048m -XX:MaxMetaspaceSize=512m',
+    );
+    upsertGradleProp(mod.modResults, 'org.gradle.workers.max', '2');
+    upsertGradleProp(mod.modResults, 'org.gradle.parallel', 'false');
+    if (singleArm64) {
+      upsertGradleProp(mod.modResults, 'reactNativeArchitectures', 'arm64-v8a');
+    }
+    return mod;
+  });
 
 /**
  * Allows cleartext HTTP ONLY in development builds so local backend testing
@@ -59,7 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       package: 'com.mesutuluag.portugeseforkids',
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#fcedb1',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
@@ -72,7 +114,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       'expo-asset',
-      'expo-audio',
+      [
+        'expo-audio',
+        {
+          microphonePermission: false,
+          recordAudioAndroid: false,
+          enableBackgroundPlayback: false,
+        },
+      ],
       'expo-image',
       [
         'expo-splash-screen',
@@ -80,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           image: './assets/splash-icon.png',
           imageWidth: 200,
           resizeMode: 'contain',
-          backgroundColor: '#fef9c3',
+          backgroundColor: '#fcedb1',
         },
       ],
       'expo-status-bar',
@@ -104,5 +153,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   };
 
-  return withDevCleartextTraffic(baseConfig);
+  const isArm64OnlyApk =
+    buildProfile === 'preview' || buildProfile === 'development';
+  return withAndroidMemorySafeBuild(withDevCleartextTraffic(baseConfig), {
+    singleArm64: isArm64OnlyApk,
+  });
 };

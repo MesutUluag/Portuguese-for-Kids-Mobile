@@ -1,0 +1,37 @@
+appId: com.mesutuluag.portugeseforkids
+---
+- launchApp:
+    clearState: true
+
+# Verify guest lands directly on Flashcards without login wall
+- assertVisible:
+    id: "cards-search-input"
+- assertVisible:
+    id: "header-sign-in-btn"
+
+# Filter flashcards by keyword and clear search
+- tapOn:
+    id: "cards-search-input"
+- inputText: "gato"
+- assertVisible:
+    id: "cards-search-clear"
+- tapOn:
+    id: "cards-search-clear"
+
+# Toggle EN <-> TR language and back
+- tapOn:
+    id: "header-lang-toggle"
+- assertVisible: "Portekizce Çocuk Oyun Alanı"
+- tapOn:
+    id: "header-lang-toggle"
+- assertVisible: "Portuguese Kids Playground"
+
+# Protected game triggers Parental Gate -> Cancel returns safely to Flashcards
+- tapOn:
+    id: "nav-mode-game1"
+- assertVisible:
+    id: "parental-gate-challenge"
+- tapOn:
+    id: "parental-gate-cancel"
+- assertVisible:
+    id: "cards-search-input"
