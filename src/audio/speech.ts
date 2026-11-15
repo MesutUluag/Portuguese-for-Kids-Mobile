@@ -1,6 +1,10 @@
 import { Alert } from 'react-native';
-import { setAudioModeAsync } from 'expo-audio';
 import * as Speech from 'expo-speech';
+import {
+  ensureAppAudioSession,
+  notifySpeechEnd,
+  notifySpeechStart,
+} from '@/audio/audioSession';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
 export interface SpeechSpeakOptions {
@@ -18,25 +22,11 @@ export interface SpeakAndScheduleOptions {
   onAdvance: () => void;
 }
 
-let audioSessionConfigured = false;
 let cachedVoiceId: string | null | undefined;
 let voiceLookupPromise: Promise<string | null> | null = null;
 let speakGeneration = 0;
 let deferredSpeakTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function ensureAudioModeConfigured(): Promise<void> {
-  if (audioSessionConfigured) return;
-  audioSessionConfigured = true;
-  try {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: 'duckOthers',
-      shouldPlayInBackground: false,
-    });
-  } catch (err) {
-    console.warn('[speech] Failed to configure audio mode:', err);
-  }
-}
+let isSpeaking = false;
 
 function pickBestPortugueseVoice(voices: Speech.Voice[]): Speech.Voice | undefined {
   return (
@@ -99,20 +89,30 @@ async function resolvePortugueseVoiceId(uiLanguage: 'en' | 'tr'): Promise<string
   return voiceLookupPromise;
 }
 
-/**
- * Stops any currently playing or queued speech synthesis utterance immediately.
- */
-export function cancelSpeech(): void {
+function resetSpeechState(endAudioSession: boolean): void {
   speakGeneration += 1;
   if (deferredSpeakTimer) {
     clearTimeout(deferredSpeakTimer);
     deferredSpeakTimer = null;
   }
-  try {
-    void Speech.stop();
-  } catch (err) {
-    console.warn('[speech] Failed to stop speech:', err);
+  if (isSpeaking) {
+    isSpeaking = false;
+    try {
+      void Speech.stop();
+    } catch (err) {
+      console.warn('[speech] Failed to stop speech:', err);
+    }
   }
+  if (endAudioSession) {
+    notifySpeechEnd();
+  }
+}
+
+/**
+ * Stops any currently playing or queued speech synthesis utterance immediately.
+ */
+export function cancelSpeech(): void {
+  resetSpeechState(true);
 }
 
 /**
@@ -121,30 +121,35 @@ export function cancelSpeech(): void {
  */
 export function speakText(text: string, options: SpeechSpeakOptions = {}): void {
   const trimmed = text.trim();
+  if (!trimmed) {
+    options.onDone?.();
+    return;
+  }
+
+  resetSpeechState(false);
+  notifySpeechStart();
+  const generation = speakGeneration;
+  const uiLanguage = options.language ?? 'en';
   let settled = false;
   const finish = () => {
     if (settled) return;
     settled = true;
+    if (generation === speakGeneration) {
+      isSpeaking = false;
+      notifySpeechEnd();
+    }
     options.onDone?.();
   };
 
-  if (!trimmed) {
-    finish();
-    return;
-  }
-
-  cancelSpeech();
-  const generation = speakGeneration;
-  const uiLanguage = options.language ?? 'en';
-
   void (async () => {
-    await ensureAudioModeConfigured();
+    await ensureAppAudioSession();
     const voiceId = await resolvePortugueseVoiceId(uiLanguage);
     if (generation !== speakGeneration) return;
 
     deferredSpeakTimer = setTimeout(() => {
       deferredSpeakTimer = null;
       if (generation !== speakGeneration) return;
+      isSpeaking = true;
       try {
         Speech.speak(trimmed, {
           language: 'pt-PT',

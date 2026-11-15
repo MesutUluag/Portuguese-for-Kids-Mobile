@@ -122,6 +122,7 @@ describe('useStatsTracker', () => {
 
     await act(async () => {
       latestTracker!.recordGameScore('game1', 5);
+      await latestTracker!.flushNow();
     });
 
     await waitFor(() => expect(mockFetchWithAuth).toHaveBeenCalledTimes(1));
@@ -186,5 +187,32 @@ describe('useStatsTracker', () => {
     expect(mockBeforeSignOut).not.toBeNull();
     expect(mockFlushHandler).not.toBeNull();
     expect(mockDiscardOutbox).not.toBeNull();
+  });
+
+  it('debounces recordGameScore network flush by 2000ms so win animations are uninterrupted', async () => {
+    jest.useFakeTimers();
+    const updatedProfile = createDefaultProfile('u1', 'p@example.com', 'BraveOwl');
+    mockFetchWithAuth.mockResolvedValue(updatedProfile);
+
+    await render(<Harness mode="game1" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    mockFetchWithAuth.mockClear();
+
+    await act(async () => {
+      latestTracker!.recordGameScore('game1', 6);
+    });
+    expect(mockFetchWithAuth).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1900);
+    });
+    expect(mockFetchWithAuth).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(150);
+    });
+    expect(mockFetchWithAuth).toHaveBeenCalledTimes(1);
   });
 });

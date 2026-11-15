@@ -281,7 +281,7 @@ export function Game5({
               accessibilityRole="button"
               accessibilityLabel={char}
               accessibilityState={{ disabled: isHidden || feedback === 'correct' }}
-              hitSlop={4}
+              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
               style={({ pressed }) => [
                 styles.tileBtn,
                 { width: tileWidth, height: tileHeight },

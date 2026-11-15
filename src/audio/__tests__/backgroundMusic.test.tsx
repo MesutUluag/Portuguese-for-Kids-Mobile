@@ -1,6 +1,12 @@
 import React from 'react';
 import { AppState } from 'react-native';
 import { act, render, waitFor } from '@testing-library/react-native';
+import { createAudioPlayer } from 'expo-audio';
+import {
+  __resetAudioSessionForTests,
+  notifySpeechEnd,
+  notifySpeechStart,
+} from '@/audio/audioSession';
 import { useBackgroundMusic } from '@/audio/backgroundMusic';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
@@ -47,6 +53,7 @@ describe('useBackgroundMusic', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    __resetAudioSessionForTests();
     mockPlayer.playing = false;
     latestHook = null;
     addEventSpy = jest
@@ -56,6 +63,7 @@ describe('useBackgroundMusic', () => {
 
   afterEach(() => {
     addEventSpy.mockRestore();
+    jest.useRealTimers();
   });
 
   it('does not play before persisted preference hydrates when muted', async () => {
@@ -90,6 +98,39 @@ describe('useBackgroundMusic', () => {
 
     expect(mockSetJSON).toHaveBeenCalledWith(STORAGE_KEYS.MUSIC_ENABLED, false);
     expect(mockPlayer.pause).toHaveBeenCalledTimes(1);
+    await view.unmount();
+  });
+
+  it('pauses music while speech is active and resumes 300ms after speech ends using 4s updateInterval', async () => {
+    jest.useFakeTimers();
+    mockGetJSON.mockResolvedValue(true);
+
+    const view = await render(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(createAudioPlayer).toHaveBeenCalledWith(expect.anything(), {
+      updateInterval: 4000,
+    });
+    expect(mockPlayer.play).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      notifySpeechStart();
+    });
+    expect(mockPlayer.pause).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      notifySpeechEnd();
+      jest.advanceTimersByTime(250);
+    });
+    // Still waiting for 300ms post-speech grace window
+    expect(mockPlayer.play).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(mockPlayer.play).toHaveBeenCalledTimes(2);
     await view.unmount();
   });
 });

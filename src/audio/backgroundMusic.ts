@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioSource } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer, type AudioSource } from 'expo-audio';
+import {
+  ensureAppAudioSession,
+  isSpeechActive,
+  subscribeSpeechActivity,
+} from '@/audio/audioSession';
 import { IS_DEV } from '@/config';
 import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
 const BACKGROUND_MUSIC_VOLUME = 0.04;
+const SPEECH_RESUME_DELAY_MS = 300;
+const STATUS_UPDATE_INTERVAL_MS = 4000;
 
 const MUSIC_TRACKS: readonly AudioSource[] = [
   require('../../assets/music/alex-morgan-kids-background-music-579469.mp3') as AudioSource,
@@ -31,6 +38,11 @@ export function useBackgroundMusic() {
   const musicEnabledRef = useRef<boolean>(!IS_DEV);
   const prefsLoadedRef = useRef<boolean>(false);
   const userToggledRef = useRef<boolean>(false);
+  const speechPausedRef = useRef<boolean>(false);
+  const appActiveRef = useRef<boolean>(
+    AppState.currentState !== 'background' && AppState.currentState !== 'inactive',
+  );
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     musicEnabledRef.current = musicEnabled;
@@ -74,25 +86,27 @@ export function useBackgroundMusic() {
     };
   }, []);
 
-  // Create player + playback completion + AppState listeners.
+  // Create player + playback completion + AppState + speech-first listeners.
   useEffect(() => {
     let player: AudioPlayer | null = null;
     try {
-      void setAudioModeAsync({
-        playsInSilentMode: true,
-        interruptionMode: 'duckOthers',
-        shouldPlayInBackground: false,
-      }).catch(() => {});
+      void ensureAppAudioSession();
+      speechPausedRef.current = isSpeechActive();
 
       const initialIdx = pickNextTrackIndex(-1);
       lastTrackIdxRef.current = initialIdx;
       player = createAudioPlayer(MUSIC_TRACKS[initialIdx] ?? null, {
-        updateInterval: 1000,
+        updateInterval: STATUS_UPDATE_INTERVAL_MS,
       });
       player.volume = BACKGROUND_MUSIC_VOLUME;
       playerRef.current = player;
 
-      if (prefsLoadedRef.current && musicEnabledRef.current) {
+      if (
+        prefsLoadedRef.current &&
+        musicEnabledRef.current &&
+        !speechPausedRef.current &&
+        appActiveRef.current
+      ) {
         player.play();
       }
     } catch {
@@ -101,15 +115,63 @@ export function useBackgroundMusic() {
 
     const activePlayer = player;
     const statusSub = activePlayer.addListener('playbackStatusUpdate', (status) => {
-      if (prefsLoadedRef.current && status.didJustFinish && musicEnabledRef.current) {
+      if (
+        prefsLoadedRef.current &&
+        status.didJustFinish &&
+        musicEnabledRef.current &&
+        !speechPausedRef.current &&
+        appActiveRef.current
+      ) {
         startNextTrack(activePlayer);
       }
     });
 
+    const unsubSpeech = subscribeSpeechActivity((speaking) => {
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
+      try {
+        if (speaking) {
+          speechPausedRef.current = true;
+          if (activePlayer.playing) {
+            activePlayer.pause();
+          }
+        } else {
+          resumeTimerRef.current = setTimeout(() => {
+            resumeTimerRef.current = null;
+            if (isSpeechActive()) return;
+            speechPausedRef.current = false;
+            try {
+              if (
+                prefsLoadedRef.current &&
+                musicEnabledRef.current &&
+                appActiveRef.current &&
+                !activePlayer.playing
+              ) {
+                activePlayer.volume = BACKGROUND_MUSIC_VOLUME;
+                activePlayer.play();
+              }
+            } catch {
+              // Ignore native playback errors
+            }
+          }, SPEECH_RESUME_DELAY_MS);
+        }
+      } catch {
+        // Ignore player teardown races
+      }
+    });
+
     const appSub = AppState.addEventListener('change', (nextState) => {
+      appActiveRef.current = nextState === 'active';
       try {
         if (nextState === 'active') {
-          if (prefsLoadedRef.current && musicEnabledRef.current && !activePlayer.playing) {
+          if (
+            prefsLoadedRef.current &&
+            musicEnabledRef.current &&
+            !speechPausedRef.current &&
+            !activePlayer.playing
+          ) {
             activePlayer.play();
           }
         } else if (activePlayer.playing) {
@@ -121,6 +183,11 @@ export function useBackgroundMusic() {
     });
 
     return () => {
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
+      unsubSpeech();
       statusSub.remove();
       appSub.remove();
       playerRef.current = null;
@@ -141,7 +208,7 @@ export function useBackgroundMusic() {
     try {
       if (!musicEnabled) {
         if (player.playing) player.pause();
-      } else if (!player.playing) {
+      } else if (!speechPausedRef.current && appActiveRef.current && !player.playing) {
         player.volume = BACKGROUND_MUSIC_VOLUME;
         player.play();
       }

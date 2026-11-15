@@ -20,6 +20,7 @@ import { getJSON, setJSON, STORAGE_KEYS } from '@/utils/storage';
 
 const IDLE_TIMEOUT_MS = 180_000; // 3 minutes without interaction
 const SAVE_THROTTLE_MS = 5_000;
+const SCORE_FLUSH_DEBOUNCE_MS = 2_000;
 
 export function useStatsTracker(currentMode: Mode) {
   const {
@@ -46,6 +47,7 @@ export function useStatsTracker(currentMode: Mode) {
   const modeRef = useRef<Mode>(currentMode);
   const profileRef = useRef<UserProfile | null>(profile);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scoreFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const todaySecondsListenersRef = useRef<Set<(seconds: number) => void>>(new Set());
   const [unsyncedScoreByMode, setUnsyncedScoreByMode] = useState<Partial<Record<Mode, number>>>({});
 
@@ -110,12 +112,20 @@ export function useStatsTracker(currentMode: Mode) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
+    if (scoreFlushTimerRef.current) {
+      clearTimeout(scoreFlushTimerRef.current);
+      scoreFlushTimerRef.current = null;
+    }
     outboxRef.current = createEmptyOutbox('guest');
     setUnsyncedScoreByMode({});
     notifyTodaySecondsListeners();
   }, [notifyTodaySecondsListeners]);
 
   const flush = useCallback(async (): Promise<void> => {
+    if (scoreFlushTimerRef.current) {
+      clearTimeout(scoreFlushTimerRef.current);
+      scoreFlushTimerRef.current = null;
+    }
     if (!user || !outboxReadyRef.current) return;
     const outbox = outboxRef.current;
     if (!hasOutboxDeltas(outbox) || isSyncingRef.current) return;
@@ -222,6 +232,10 @@ export function useStatsTracker(currentMode: Mode) {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
+      if (scoreFlushTimerRef.current) {
+        clearTimeout(scoreFlushTimerRef.current);
+        scoreFlushTimerRef.current = null;
+      }
     };
   }, [notifyTodaySecondsListeners, scheduleSaveOutbox]);
 
@@ -302,7 +316,13 @@ export function useStatsTracker(currentMode: Mode) {
         (outbox.gamesCompletedDelta[mode] ?? 0) + 1;
       setUnsyncedScoreByMode({ ...outbox.scoreByModeDelta });
       persistOutboxNow(outbox);
-      void flush();
+      if (scoreFlushTimerRef.current) {
+        clearTimeout(scoreFlushTimerRef.current);
+      }
+      scoreFlushTimerRef.current = setTimeout(() => {
+        scoreFlushTimerRef.current = null;
+        void flush();
+      }, SCORE_FLUSH_DEBOUNCE_MS);
     },
     [flush, persistOutboxNow],
   );

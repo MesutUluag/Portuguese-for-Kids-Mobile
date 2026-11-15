@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import Svg, {
   Circle,
@@ -210,18 +211,12 @@ const BunnyMascot = React.memo(function BunnyMascot({
           withTiming(-4, { duration: 160 }),
           withTiming(0, { duration: 160 }),
         ),
-        -1,
+        6,
         false,
       );
     } else {
-      bounceY.value = withRepeat(
-        withSequence(
-          withTiming(-3, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        false,
-      );
+      bounceY.value = withTiming(0, { duration: 150 });
+      shakeX.value = 0;
     }
   }, [bounceY, isHappy, isSad, isTalking, reduceMotion, shakeX]);
 
@@ -248,7 +243,11 @@ const BunnyMascot = React.memo(function BunnyMascot({
       style={({ pressed }) => [styles.bunnyWrap, pressed && styles.pressedSoft]}
     >
       {isHappy ? <Text style={styles.bunnyStars}>💖 ✨ 💖</Text> : null}
-      <Animated.View style={animStyle}>
+      <Animated.View
+        style={animStyle}
+        renderToHardwareTextureAndroid
+        shouldRasterizeIOS
+      >
         <Svg width={74} height={86} viewBox="0 0 100 116">
           <Defs>
             <RadialGradient id="bmFur" cx="48%" cy="38%" r="58%">
@@ -479,18 +478,7 @@ const RealisticCart = React.memo(function RealisticCart({
     }
 
     scale.value = reduceMotion ? 1 : withTiming(1, { duration: 180 });
-    if (reduceMotion) {
-      transY.value = 0;
-    } else {
-      transY.value = withRepeat(
-        withSequence(
-          withTiming(-2, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        false,
-      );
-    }
+    transY.value = reduceMotion ? 0 : withTiming(0, { duration: 180 });
   }, [cartState, reduceMotion, scale, transX, transY]);
 
   const wrapperAnim = useAnimatedStyle(() => ({
@@ -502,7 +490,11 @@ const RealisticCart = React.memo(function RealisticCart({
   }));
 
   return (
-    <Animated.View style={[styles.cartWrapper, wrapperAnim]}>
+    <Animated.View
+      style={[styles.cartWrapper, wrapperAnim]}
+      renderToHardwareTextureAndroid
+      shouldRasterizeIOS
+    >
       <View style={styles.cartGroundShadow} pointerEvents="none" />
 
       <View style={styles.cartFrame}>
@@ -712,18 +704,24 @@ function FlyingItemOverlay({
 interface ShelfTileProps {
   item: MobileMarketItem;
   isDragging: boolean;
+  dragGhostX: SharedValue<number>;
+  dragGhostY: SharedValue<number>;
+  rootBoxX: SharedValue<number>;
+  rootBoxY: SharedValue<number>;
   onTapItem: (item: MobileMarketItem, ref: React.RefObject<RNViewRef | null>) => void;
   onDragBegin: (item: MobileMarketItem, absX: number, absY: number) => void;
-  onDragMove: (absX: number, absY: number) => void;
   onDragEnd: (item: MobileMarketItem, absX: number, absY: number) => void;
 }
 
 const ShelfTile = React.memo(function ShelfTile({
   item,
   isDragging,
+  dragGhostX,
+  dragGhostY,
+  rootBoxX,
+  rootBoxY,
   onTapItem,
   onDragBegin,
-  onDragMove,
   onDragEnd,
 }: ShelfTileProps) {
   const tileRef = useRef<RNViewRef | null>(null);
@@ -732,11 +730,14 @@ const ShelfTile = React.memo(function ShelfTile({
     .minDistance(10)
     .onStart((e) => {
       'worklet';
+      dragGhostX.set(e.absoluteX - rootBoxX.get());
+      dragGhostY.set(e.absoluteY - rootBoxY.get());
       scheduleOnRN(onDragBegin, item, e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
       'worklet';
-      scheduleOnRN(onDragMove, e.absoluteX, e.absoluteY);
+      dragGhostX.set(e.absoluteX - rootBoxX.get());
+      dragGhostY.set(e.absoluteY - rootBoxY.get());
     })
     .onEnd((e) => {
       'worklet';
@@ -843,6 +844,8 @@ export function Game7({
   const flushOrderAnnounceRef = useRef<(() => void) | null>(null);
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
+  const rootBoxX = useSharedValue(0);
+  const rootBoxY = useSharedValue(0);
   const dragGhostX = useSharedValue(0);
   const dragGhostY = useSharedValue(0);
 
@@ -948,6 +951,8 @@ export function Game7({
     rootRef.current?.measureInWindow((rx, ry, rw, rh) => {
       if (rw > 0 && rh > 0) {
         rootBoxRef.current = { x: rx, y: ry, width: rw, height: rh };
+        rootBoxX.set(rx);
+        rootBoxY.set(ry);
       }
     });
     cartZoneRef.current?.measureInWindow((cx, cy, cw, ch) => {
@@ -955,7 +960,7 @@ export function Game7({
         cartBoxRef.current = { x: cx, y: cy, width: cw, height: ch };
       }
     });
-  }, []);
+  }, [rootBoxX, rootBoxY]);
 
   // Announce initial order on mount
   useEffect(() => {
@@ -1187,6 +1192,8 @@ export function Game7({
 
       rootRef.current?.measureInWindow((rx, ry, rw, rh) => {
         rootBoxRef.current = { x: rx, y: ry, width: rw, height: rh };
+        rootBoxX.set(rx);
+        rootBoxY.set(ry);
         dragGhostX.set(absX - rx);
         dragGhostY.set(absY - ry);
       });
@@ -1198,16 +1205,7 @@ export function Game7({
         setCartState('dragOver');
       }
     },
-    [dragGhostX, dragGhostY],
-  );
-
-  const handleDragMove = useCallback(
-    (absX: number, absY: number) => {
-      const rootBox = rootBoxRef.current;
-      dragGhostX.set(absX - rootBox.x);
-      dragGhostY.set(absY - rootBox.y);
-    },
-    [dragGhostX, dragGhostY],
+    [dragGhostX, dragGhostY, rootBoxX, rootBoxY],
   );
 
   const handleDragEnd = useCallback(
@@ -1250,12 +1248,17 @@ export function Game7({
     ],
   }));
 
-  const listenLabel = isTr ? 'Dinle' : 'Ouvir';
+  const listenLabel = isTr ? 'Dinle' : 'Listen';
   const orderDone = cartCount >= order.count;
 
   return (
     <View ref={rootRef} style={styles.card} onLayout={measureBoxes}>
-      <GameScoreBadge score={score} recentGain={recentGain} gainKey={gainKey} />
+      <GameScoreBadge
+        score={score}
+        recentGain={recentGain}
+        gainKey={gainKey}
+        language={language}
+      />
 
       {/* Mascot + Speech Bubble */}
       <View style={styles.mascotRow}>
@@ -1273,7 +1276,7 @@ export function Game7({
             onPress={handleMascotPress}
             accessibilityRole="button"
             accessibilityLabel={listenLabel}
-            hitSlop={8}
+            hitSlop={10}
             style={({ pressed }) => [styles.ouvirBtn, pressed && styles.pressedSoft]}
           >
             <Volume2 size={18} strokeWidth={2.4} color={colors.white} />
@@ -1335,9 +1338,12 @@ export function Game7({
                 key={item.id}
                 item={item}
                 isDragging={draggingItem?.id === item.id}
+                dragGhostX={dragGhostX}
+                dragGhostY={dragGhostY}
+                rootBoxX={rootBoxX}
+                rootBoxY={rootBoxY}
                 onTapItem={handleTapItem}
                 onDragBegin={handleDragBegin}
-                onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
               />
             ))}

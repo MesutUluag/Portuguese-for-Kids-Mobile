@@ -289,8 +289,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   charBtn: {
-    width: 50,
-    height: 50,
+    width: 56,
+    height: 56,
     borderRadius: 10,
     backgroundColor: colors.blue,
     alignItems: 'center',

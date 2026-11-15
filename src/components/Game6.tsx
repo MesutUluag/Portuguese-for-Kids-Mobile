@@ -293,6 +293,8 @@ interface JigsawPieceProps {
   boardSize: number;
   reduceMotion: boolean;
   positions: SharedValue<PiecePosMap>;
+  activeDragX: SharedValue<number>;
+  activeDragY: SharedValue<number>;
   solvedFlags: SharedValue<boolean[]>;
   activePiece: SharedValue<number>;
   activeScale: SharedValue<number>;
@@ -308,6 +310,8 @@ function SkiaJigsawPiece({
   boardSize,
   reduceMotion,
   positions,
+  activeDragX,
+  activeDragY,
   solvedFlags,
   activePiece,
   activeScale,
@@ -329,10 +333,12 @@ function SkiaJigsawPiece({
   const trayRot = reduceMotion ? 0 : (BASE_TRAY_POSITIONS[traySlot]?.rot ?? 0);
 
   const transform = useDerivedValue(() => {
-    const pos = positions.value;
     const isActive = activePiece.value === index;
     const isSolved = solvedFlags.value[index] === true;
     const t = splitProgress.value;
+    const pos = positions.value;
+    const tx = isActive ? activeDragX.value : (pos[`x${index}`] ?? 0);
+    const ty = isActive ? activeDragY.value : (pos[`y${index}`] ?? 0);
     const pieceScale = isActive
       ? activeScale.value
       : isSolved
@@ -340,8 +346,8 @@ function SkiaJigsawPiece({
         : 1 + (trayScale - 1) * t;
     const pieceRot = isActive || isSolved ? 0 : trayRot * t;
     return [
-      { translateX: pos[`x${index}`] ?? 0 },
-      { translateY: pos[`y${index}`] ?? 0 },
+      { translateX: tx },
+      { translateY: ty },
       { scale: pieceScale },
       { rotate: pieceRot },
     ];
@@ -455,6 +461,8 @@ interface JigsawStageProps {
   reduceMotion: boolean;
   skImage: SkImage | null;
   positions: SharedValue<PiecePosMap>;
+  activeDragX: SharedValue<number>;
+  activeDragY: SharedValue<number>;
   solvedFlags: SharedValue<boolean[]>;
   activePiece: SharedValue<number>;
   activeScale: SharedValue<number>;
@@ -486,6 +494,8 @@ const JigsawStage = React.memo(function JigsawStage({
   reduceMotion,
   skImage,
   positions,
+  activeDragX,
+  activeDragY,
   solvedFlags,
   activePiece,
   activeScale,
@@ -518,6 +528,8 @@ const JigsawStage = React.memo(function JigsawStage({
           event.y >= top - 12 &&
           event.y <= top + traySize + 12
         ) {
+          activeDragX.set(px);
+          activeDragY.set(py);
           activePiece.set(i);
           dragStartX.set(px);
           dragStartY.set(py);
@@ -531,11 +543,8 @@ const JigsawStage = React.memo(function JigsawStage({
       'worklet';
       const idx = activePiece.get();
       if (idx < 0) return;
-      positions.set({
-        ...positions.get(),
-        [`x${idx}`]: dragStartX.get() + event.translationX,
-        [`y${idx}`]: dragStartY.get() + event.translationY,
-      });
+      activeDragX.set(dragStartX.get() + event.translationX);
+      activeDragY.set(dragStartY.get() + event.translationY);
     })
     .onEnd(() => {
       'worklet';
@@ -544,14 +553,25 @@ const JigsawStage = React.memo(function JigsawStage({
       if (idx < 0) return;
 
       const current = positions.get();
-      const px = current[`x${idx}`] ?? 0;
-      const py = current[`y${idx}`] ?? 0;
+      const px = activeDragX.get();
+      const py = activeDragY.get();
+      const releaseMap = {
+        ...current,
+        [`x${idx}`]: px,
+        [`y${idx}`]: py,
+      };
+      positions.set(releaseMap);
 
       const row = Math.floor(idx / COLS);
       const col = idx % COLS;
       const solvedX = boardX + col * pieceSize;
       const solvedY = boardY + row * pieceSize;
-      const dist = Math.hypot(px - solvedX, py - solvedY);
+      // Compare piece visual centers so trayCenterOffset & activeScale never shift snap distance
+      const pieceCenterX = px + pieceSize / 2;
+      const pieceCenterY = py + pieceSize / 2;
+      const targetCenterX = solvedX + pieceSize / 2;
+      const targetCenterY = solvedY + pieceSize / 2;
+      const dist = Math.hypot(pieceCenterX - targetCenterX, pieceCenterY - targetCenterY);
 
       if (dist <= snapDist) {
         const nextFlags = [...solvedFlags.get()];
@@ -560,7 +580,7 @@ const JigsawStage = React.memo(function JigsawStage({
         activePiece.set(-1);
         activeScale.set(1);
         const snappedMap = {
-          ...current,
+          ...releaseMap,
           [`x${idx}`]: solvedX,
           [`y${idx}`]: solvedY,
         };
@@ -572,7 +592,7 @@ const JigsawStage = React.memo(function JigsawStage({
         activePiece.set(-1);
         activeScale.set(trayScale);
         const resetMap = {
-          ...current,
+          ...releaseMap,
           [`x${idx}`]: (slot?.x ?? 0) * scale - trayCenterOffset,
           [`y${idx}`]: (slot?.y ?? 0) * scale - trayCenterOffset,
         };
@@ -587,10 +607,16 @@ const JigsawStage = React.memo(function JigsawStage({
       if (!didEndCleanly.get() && idx >= 0) {
         const slotIdx = traySlotsSV.get()[idx] ?? idx;
         const slot = BASE_TRAY_POSITIONS[slotIdx];
+        const releaseMap = {
+          ...positions.get(),
+          [`x${idx}`]: activeDragX.get(),
+          [`y${idx}`]: activeDragY.get(),
+        };
+        positions.set(releaseMap);
         activePiece.set(-1);
         activeScale.set(trayScale);
         const resetMap = {
-          ...positions.get(),
+          ...releaseMap,
           [`x${idx}`]: (slot?.x ?? 0) * scale - trayCenterOffset,
           [`y${idx}`]: (slot?.y ?? 0) * scale - trayCenterOffset,
         };
@@ -669,6 +695,8 @@ const JigsawStage = React.memo(function JigsawStage({
                   boardSize={boardSize}
                   reduceMotion={reduceMotion}
                   positions={positions}
+                  activeDragX={activeDragX}
+                  activeDragY={activeDragY}
                   solvedFlags={solvedFlags}
                   activePiece={activePiece}
                   activeScale={activeScale}
@@ -816,6 +844,8 @@ export function Game6({
   const splitProgress = useSharedValue<number>(0);
   const dragStartX = useSharedValue<number>(0);
   const dragStartY = useSharedValue<number>(0);
+  const activeDragX = useSharedValue<number>(0);
+  const activeDragY = useSharedValue<number>(0);
   const didEndCleanly = useSharedValue<boolean>(false);
   const traySlotsSV = useSharedValue<number[]>(roundState.traySlots);
   const canDragSV = useSharedValue<boolean>(false);
@@ -864,6 +894,8 @@ export function Game6({
     lockChangeRef.current?.(false);
     solvedRef.current = false;
     activePiece.set(-1);
+    activeDragX.set(0);
+    activeDragY.set(0);
     activeScale.set(trayScale);
     splitProgress.set(0);
     solvedFlags.set(Array<boolean>(TOTAL_PIECES).fill(false));
@@ -880,6 +912,8 @@ export function Game6({
       timedOut: false,
     }));
   }, [
+    activeDragX,
+    activeDragY,
     activePiece,
     activeScale,
     boardX,
@@ -1123,7 +1157,12 @@ export function Game6({
           roundSolved && styles.cardSolved,
         ]}
       >
-        <GameScoreBadge score={score} recentGain={recentGain} gainKey={gainKey} />
+        <GameScoreBadge
+          score={score}
+          recentGain={recentGain}
+          gainKey={gainKey}
+          language={language}
+        />
 
         <Text style={styles.title} maxFontSizeMultiplier={1.25}>
           {isTr ? '🧩 Yapboz' : '🧩 Puzzle'}
@@ -1184,6 +1223,8 @@ export function Game6({
                 reduceMotion={reduceMotion}
                 skImage={activeImage}
                 positions={positions}
+                activeDragX={activeDragX}
+                activeDragY={activeDragY}
                 solvedFlags={solvedFlags}
                 activePiece={activePiece}
                 activeScale={activeScale}
